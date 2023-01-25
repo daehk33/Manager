@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="code">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] code.checkCodeGrpDuplicated  -->
+	<select id="checkCodeGrpDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_code_grp
+		WHERE
+			grp_id = #{grp_id}
+	</select>
+
+	<!-- [조회] code.getCodeGroupCount  -->
+	<select id="getCodeGroupCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_code_grp
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='grp_id != "" and grp_id != null'>
+			AND grp_id LIKE '%'||#{grp_id}||'%'
+		</if>
+		<if test='grp_nm != "" and grp_nm != null'>
+			AND grp_nm LIKE '%'||#{grp_nm}||'%'
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] code.getCodeGroupList  -->
+	<select id="getCodeGroupList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,grp_id
+			,grp_nm
+			,grp_desc
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_code_grp
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='grp_id != "" and grp_id != null'>
+			AND grp_id LIKE '%'||#{grp_id}||'%'
+		</if>
+		<if test='grp_nm != "" and grp_nm != null'>
+			AND grp_nm LIKE '%'||#{grp_nm}||'%'
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] code.insertCodeGroupInfo  -->
+	<insert id="insertCodeGroupInfo" parameterType="map">
+		INSERT INTO tbl_code_grp(
+			grp_id
+			,grp_nm
+			,grp_desc
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES(
+			#{grp_id}
+			,#{grp_nm}
+			,#{grp_desc}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] code.deleteCodeGroupInfo  -->
+	<delete id="deleteCodeGroupInfo" parameterType="map">
+		DELETE FROM tbl_code_grp
+		WHERE rec_key = #{rec_key}
+			and rec_key NOT IN (SELECT DISTINCT grp_key FROM tbl_code WHERE grp_key = #{rec_key})
+	</delete>
+	
+	<!-- [수정] code.updateCodeGroupInfo  -->
+	<update id="updateCodeGroupInfo" parameterType="map">
+		UPDATE tbl_code_grp
+		SET
+			grp_id		= #{grp_id}
+			,grp_nm		= #{grp_nm}
+			,grp_desc	= #{grp_desc}
+			,edit_user	= #{worker}
+			,edit_date	= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] code.checkCodeGrpDuplicated  -->
+	<select id="checkCodeDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_code
+		WHERE
+			grp_key = #{grp_key}
+			AND code = #{code}
+	</select>
+
+	<!-- [조회] code.getCodeCount  -->
+	<select id="getCodeCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_code
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='grp_key != null'>
+			AND grp_key = #{grp_key}
+		</if>
+		<if test='code != "" and code != null'>
+			AND code = #{code}
+		</if>
+		<if test='code_value != "" and code_value != null'>
+			AND code_value = #{code_value}
+		</if>
+		<if test='code_desc != "" and code_desc != null'>
+			AND code_desc = #{code_desc}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] code.getCodeList  -->
+	<select id="getCodeList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key 
+			,grp_key
+			,code
+			,code_value
+			,code_value2
+			,code_value3
+			,code_desc
+			,use_yn
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM TBL_CODE
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='grp_key != null'>
+			AND grp_key = #{grp_key}
+		</if>
+		<if test='code != "" and code != null'>
+			AND code = #{code}
+		</if>
+		<if test='code_value != "" and code_value != null'>
+			AND code_value = #{code_value}
+		</if>
+		<if test='code_desc != "" and code_desc != null'>
+			AND code_desc = #{code_desc}
+		</if>
+		<if test='use_yn != "" and use_yn != null'>
+			AND use_yn  = #{use_yn}
+		</if>
+		</where>
+		ORDER BY grp_key, code
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] code.insertCodeInfo  -->
+	<insert id="insertCodeInfo" parameterType="map">
+		INSERT INTO tbl_code(
+			grp_key
+			,code
+			,code_value
+			,code_value2
+			,code_value3
+			,use_yn
+			,code_desc
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES(
+			#{grp_key}
+			,#{code}
+			,#{code_value}
+			,#{code_value2}
+			,#{code_value3}
+			,#{use_yn}
+			,#{code_desc}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] code.deleteCodeInfo  -->
+	<delete id="deleteCodeInfo" parameterType="map">
+		DELETE FROM tbl_code
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [수정] code.updateCodeInfo  -->
+	<update id="updateCodeInfo" parameterType="map">
+		UPDATE tbl_code
+		SET
+			grp_key			= #{grp_key}
+			,code			= #{code}
+			,code_value		= #{code_value}
+			,code_value2	= #{code_value2}
+			,code_value3	= #{code_value3}
+			,use_yn			= #{use_yn}
+			,code_desc		= #{code_desc}
+			,edit_user		= #{worker}
+			,edit_date		= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+</mapper>

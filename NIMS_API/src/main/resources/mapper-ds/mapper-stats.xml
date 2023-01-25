@@ -1,0 +1,2691 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="stats">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<select id="getStatsDayCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN (
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS date
+		) date ON 1=1
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getStatsDateCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1=1
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getStatsTimeCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(date_value) ON 1=1
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	<!--
+		*****[스마트도서관]*****
+	-->
+	<!-- 스마트도서관 기간별 통계 조회 (대출)  -->
+	<sql id="getStatsSLSLoanListSql">
+		SELECT
+			TO_CHAR(loan.loan_date, #{DateFormat}) as loan_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(DISTINCT loan.user_id) as USER_CNT
+			,COUNT(loan.user_id) as CNT
+		FROM
+			tbl_library library 
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(
+				SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_loan
+				UNION
+				SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_sls_use_log
+				UNION
+				SELECT library_key, device_key, user_no AS user_id, user_name, loan_date FROM tbl_api_sls_reservation
+			) loan ON library.rec_key = loan.library_key AND loan.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY 1, library.rec_key , library.library_id , library.library_nm
+	</sql>
+	
+	<!-- 스마트도서관 기간별 통계 조회 (반납) -->
+	<sql id="getStatsSLSReturnListSql">
+		SELECT
+			TO_CHAR(return.return_date, #{DateFormat}) as return_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(DISTINCT return.user_id) as USER_CNT
+			,COUNT(return.user_id) as CNT
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN(
+				SELECT library_key, device_key, '' user_id , '' user_name , return_date FROM tbl_api_loan
+				UNION
+				SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_use_log
+				UNION
+				SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_return
+			) return ON library.rec_key = return.library_key AND return.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY 1, library.rec_key , library.library_id , library.library_nm
+	</sql>
+	
+	<!-- 스마트도서관 요일별 통계 조회 (대출) -->
+	<sql id="getStatsSLSLoanListByDateSql">
+		SELECT
+			loan.library_key
+			,fn_library_nm(loan.library_key) as library_nm
+			,TO_CHAR(loan_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(loan_date, 'd')::int, 1) as date_nm
+			,count(loan.user_id) as loan_cnt
+			,count(DISTINCT loan.user_id) as loan_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_no AS user_id, user_name, loan_date FROM tbl_api_sls_reservation
+		) loan ON library.rec_key = loan.library_key AND device.rec_key = loan.device_key
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY loan.library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 스마트도서관 요일별 통계 조회 (반납) -->
+	<sql id="getStatsSLSReturnListByDateSql">
+		SELECT
+			return.library_key
+			,fn_library_nm(return.library_key) as library_nm
+			,TO_CHAR(return_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(return_date, 'd')::int, 1) as date_nm
+			,count(return.user_id) as return_cnt
+			,count(DISTINCT return.user_id) as return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, '' user_id, '' user_name, return_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_return
+		) return ON library.rec_key = return.library_key AND device.rec_key = return.device_key
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY return.library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 스마트도서관 시간별 통계 조회 (대출) -->
+	<sql id="getStatsSLSLoanListByTimeSql">
+		SELECT
+			library.rec_key as library_key
+			,TO_CHAR(loan_date, 'HH24') AS loan_hour
+			,COUNT(user_id) AS loan_cnt
+			,COUNT(DISTINCT user_id) as loan_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, user_id , user_name , loan_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_no AS user_id, user_name, loan_date FROM tbl_api_sls_reservation
+		) loan_log ON library.rec_key = loan_log.library_key AND device.rec_key = loan_log.device_key
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, TO_CHAR(loan_date, 'HH24')
+	</sql>
+	
+	<!-- 스마트도서관 시간별 통계 조회 (반납) -->
+	<sql id="getStatsSLSReturnListByTimeSql">
+		SELECT
+			library.rec_key as library_key
+			,TO_CHAR(return_date, 'HH24') AS return_hour
+			,COUNT(user_id) AS return_cnt
+			,COUNT(DISTINCT user_id) as return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, '' user_id , '' user_name , return_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_return
+		) return_log ON library.rec_key = return_log.library_key AND device.rec_key = return_log.device_key
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{devicve_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, TO_CHAR(return_date, 'HH24')
+	</sql>
+	
+	<!-- 스마트도서관 장비별 통계 조회 (대출) -->
+	<sql id="getStatsSLSLoanListByDeviceSql">
+		SELECT
+			library.rec_key as library_key
+			,device_key
+			,COUNT(user_id) AS loan_cnt
+			,COUNT(DISTINCT user_id) as loan_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, user_id , user_name , loan_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_no AS user_id, user_name, loan_date FROM tbl_api_sls_reservation
+		) loan_log ON library.rec_key = loan_log.library_key AND device.rec_key = loan_log.device_key
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, device_key
+	</sql>
+	
+	<!-- 스마트도서관 장비별 통계 조회 (반납) -->
+	<sql id="getStatsSLSReturnListByDeviceSql">
+		SELECT
+			library.rec_key as library_key
+			,device_key
+			,COUNT(user_id) AS return_cnt
+			,COUNT(DISTINCT user_id) as return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+		(
+			SELECT library_key, device_key, '' user_id , '' user_name , return_date FROM tbl_api_loan
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_use_log
+			UNION
+			SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_return
+		) return_log ON library.rec_key = return_log.library_key AND device.rec_key = return_log.device_key
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, device_key
+	</sql>
+	
+	<!-- 스마트도서관 이용 달력 조회 (대출) -->
+	<sql id="getStatsSLSLoanListWithoutLibrarySql">
+		SELECT
+			date.return_date
+			,COUNT(DISTINCT loan.user_id) as USER_CNT
+			,COUNT(loan.user_id) as CNT
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS return_date
+			) date ON 1=1
+			INNER JOIN
+			(
+				SELECT library_key, device_key, user_id , user_name , loan_date FROM tbl_api_loan
+				UNION
+				SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_sls_use_log
+				UNION
+				SELECT library_key, device_key, user_no AS user_id, user_name, loan_date FROM tbl_api_sls_reservation
+			) loan ON library.rec_key = loan.library_key AND date.return_date = to_char(loan.loan_date,#{DateFormat})
+				AND device.rec_key = loan.device_key 
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY date.return_date
+	</sql>
+	
+	<!-- 스마트도서관 이용 달력 조회 (반납) -->
+	<sql id="getStatsSLSReturnListWithoutLibrarySql">
+		SELECT
+			date.return_date
+			,COUNT(DISTINCT return.user_id) as USER_CNT
+			,COUNT(return.user_id) as CNT
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS return_date
+			) date ON 1=1
+			INNER JOIN (
+				SELECT library_key, device_key, '' user_id , '' user_name , return_date FROM tbl_api_loan
+				UNION
+				SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_use_log
+				UNION
+				SELECT library_key, device_key, user_id, user_name, return_date FROM tbl_api_sls_return
+			) return ON date.return_date = to_char(return.return_date,#{DateFormat}) AND library.rec_key = return.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>	
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY date.return_date
+	</sql>
+	
+	<!-- 스마트도서관 예약 대출 조회 -->
+	<sql id="getStatsSLSReservationLoanListSql">
+			SELECT
+			    date.return_date
+			    ,library.rec_key as library_key
+			    ,library.library_id
+			    ,library.library_nm
+			    ,COUNT(DISTINCT loan.user_id) as USER_CNT
+			    ,COUNT(loan.user_id) as CNT
+			FROM
+			tbl_library library LEFT OUTER JOIN  
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS return_date
+			) date ON 1=1
+			LEFT OUTER JOIN (
+				SELECT library_key, user_no AS user_id, user_name, reserve_date FROM tbl_api_sls_reservation
+			) loan ON date.return_date = to_char(loan.reserve_date::date ,#{DateFormat}) AND library.rec_key = loan.library_key
+			<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			</where>
+			GROUP BY date.return_date, library.rec_key , library.library_id , library.library_nm
+	</sql>
+	
+	<!-- 스마트도서관 기간별 무인 반납 조회 -->
+	<sql id="getStatsSLSUnmannedReturnListSql">
+		SELECT
+			TO_CHAR(return.return_date, 'YYYY-MM') as return_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(DISTINCT return.user_id) as user_cnt
+			,COUNT(return.user_id) as cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_sls_return return ON library.rec_key = return.library_key AND device.rec_key = return.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY 1, library.rec_key , library.library_id , library.library_nm
+	</sql>
+	
+	<!-- 스마트도서관 요일별 무인 반납 통계 조회 -->
+	<sql id="getStatsSLSUnmannedReturnDateSql">
+		SELECT
+			return.library_key
+			,fn_library_nm(return.library_key) as librayn_nm
+			,TO_CHAR(return_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(return_date, 'd')::int, 1) as date_nm
+			,count(return.user_id) as cnt
+			,count(DISTINCT return.user_id) as user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_sls_return return ON library.rec_key = return.library_key AND device.rec_key = return.device_key 
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY return.library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 스마트도서관 시간별 무인 반납 통계 조회 -->
+	<sql id="getStatsSLSUnmannedReturnTimeSql">
+		SELECT
+			library.rec_key AS library_key
+			,TO_CHAR(return_date, 'HH24') AS return_hour
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) AS user_cnt 
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_sls_return return ON library.rec_key = return.library_key AND device.rec_key = return.device_key
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, TO_CHAR(return_date, 'HH24')
+	</sql>
+	
+	<!-- 스마트도서관 장비별 무인 반납 통계 조회 -->
+	<sql id="getStatsSLSUnmannedReturnDeviceSql">
+		SELECT
+			library.rec_key AS library_key
+			,device_key
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_sls_return return ON library.rec_key = return.library_key AND device.rec_key = return.device_key
+		<where>
+			return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, device_key
+	</sql>
+	
+	<!-- 스마트도서관 무인 반납 이용 달력 조회 -->
+	<sql id="getStatsSLSUnmannedReturnCalendarSql">
+		SELECT
+			date.return_date
+			,COUNT(return.user_id) AS cnt
+			,COUNT(DISTINCT return.user_id) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS return_date
+			) date ON 1=1
+			INNER JOIN tbl_api_sls_return return ON library.rec_key = return.library_key AND date.return_date = to_char(return.return_date, #{DateFormat})
+				AND device.rec_key = return.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY date.return_date
+	</sql>
+	
+	<!--
+		*****[대출반납기]*****
+	-->
+	<!-- 대출반납기 기간별 통계 조회 (대출) -->
+	<sql id="getStatsLoanReturnLoanListSql">
+		SELECT
+			date.log_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(DISTINCT log.user_id) as USER_CNT
+			,COUNT(log.user_id) as CNT
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN tbl_api_loanReturn_use_log log ON date.log_date = TO_CHAR(log.log_date, #{DateFormat}) AND library.rec_key = log.library_key AND log.status = '0'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+		GROUP BY date.log_date, library.rec_key, library.library_id, library.library_nm
+	</sql>
+	
+	<!-- 대출반납기 기간별 통계 조회 (반납) -->
+	<sql id="getStatsLoanReturnReturnListSql">
+		SELECT
+			date.log_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(DISTINCT log.user_id) as USER_CNT
+			,COUNT(log.user_id) as CNT
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN tbl_api_loanReturn_use_log log ON date.log_date = TO_CHAR(log.log_date, #{DateFormat}) AND library.rec_key = log.library_key AND status = '1'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+		GROUP BY date.log_date, library.rec_key, library.library_id, library.library_nm
+	</sql>
+	
+	<!-- 대출반납기 요일별 통계 조회 (대출) -->
+	<sql id="getStatsLoanReturnLoanListByDateSql">
+		SELECT
+			library_key
+			,fn_library_nm(library_key) as library_nm
+			,TO_CHAR(log_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(log_date, 'd')::int, 1) as date_nm
+			,count(user_id) as loan_cnt
+			,count(DISTINCT user_id) as loan_user_cnt
+		FROM
+			tbl_api_loanreturn_use_log
+		<where>
+			log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND status = '0'
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		group by library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 대출반납기 요일별 통계 조회 (반납) -->
+	<sql id="getStatsLoanReturnReturnListByDateSql">
+		SELECT
+			library_key
+			,fn_library_nm(library_key) as library_nm
+			,TO_CHAR(log_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(log_date, 'd')::int, 1) as date_nm
+			,count(user_id) as return_cnt
+			,count(DISTINCT user_id) as return_user_cnt
+		FROM
+			tbl_api_loanreturn_use_log
+		<where>
+			log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND status = '1'
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 대출반납기 시간별 통계 조회 (대출) -->
+	<sql id="getStatsLoanReturnLoanListByTimeSql">
+		SELECT
+			library_key
+			,TO_CHAR(log_date, 'HH24') AS loan_hour
+			,COUNT(user_id) as loan_cnt
+			,COUNT(DISTINCT user_id) as loan_user_cnt
+		FROM
+			tbl_api_loanreturn_use_log as loan_log
+		<where>
+			log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND status = '0'
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library_key, TO_CHAR(log_date, 'HH24')
+	</sql>
+	
+	<!-- 대출반납기 시간별 통계 조회 (반납) -->
+	<sql id="getStatsLoanReturnReturnListByTimeSql">
+		SELECT
+			library_key
+			,TO_CHAR(log_date, 'HH24') AS return_hour
+			,COUNT(user_id) AS return_cnt
+			,COUNT(DISTINCT user_id) AS return_user_cnt
+		FROM
+			tbl_api_loanreturn_use_log as return_log
+		<where>
+			log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND status = '1'
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library_key, TO_CHAR(log_date, 'HH24')
+	</sql>
+	
+	<!-- 대출반납기 장비별 통계 조회 (대출) -->
+	<sql id="getStatsLoanReturnLoanListByDeviceSql">
+		SELECT
+				library_key
+				,device_key
+				,COUNT(user_id) AS loan_cnt
+				,COUNT(DISTINCT user_id) AS loan_user_cnt
+			FROM
+				tbl_api_loanReturn_use_log loan
+			<where>
+				log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+				AND status = '0'
+			</where>
+			GROUP BY library_key, device_key
+	</sql>
+	
+	<!-- 대출반납기 장비별 통계 조회 (반납) -->
+	<sql id="getStatsLoanReturnReturnListByDeviceSql">
+		SELECT
+				library_key
+				,device_key
+				,COUNT(user_id) AS return_cnt
+				,COUNT(DISTINCT user_id) AS return_user_cnt
+			FROM
+				tbl_api_loanReturn_use_log return
+			<where>
+				log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+				AND status = '1'
+			</where>
+			GROUP BY library_key, device_key
+	</sql>
+	
+	<!-- 대출반납기 이용 달력 조회 (대출) -->
+	<sql id="getStatsLoanReturnLoanListWithoutLibrarySql">
+		SELECT
+			date.log_date
+			,COUNT(DISTINCT log.user_id) as USER_CNT
+			,COUNT(log.user_id) as CNT
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN tbl_api_loanReturn_use_log log ON date.log_date = log.loan_date AND library.rec_key = log.library_key AND log.status = '0'
+		<if test='library_key != "" and library_key != null'>
+			AND log.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND log.device_key = #{device_key}
+		</if>
+		GROUP BY date.log_date
+	</sql>
+	
+	<!-- 대출반납기 이용 달력 조회 (반납) -->
+	<sql id="getStatsLoanReturnReturnListWithoutLibrarySql">
+		SELECT
+			date.log_date
+			,COUNT(DISTINCT log.user_id) as USER_CNT
+			,COUNT(log.user_id) as CNT
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN tbl_api_loanReturn_use_log log ON date.log_date = log.return_date AND library.rec_key = log.library_key AND status = '1'
+		<if test='library_key != "" and library_key != null'>
+			AND log.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND log.device_key = #{device_key}
+		</if>
+		GROUP BY date.log_date
+	</sql>
+	
+	<!-- 
+		*****[반납기]*****
+	-->
+	<!-- 반납기 기간별 통계 조회 -->
+	<sql id="getStatsReturnListSql">
+		SELECT
+			TO_CHAR(book_state_date::date, #{DateFormat}) AS book_state_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(id_no) as cnt
+			,COUNT(DISTINCT id_no) as user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_return_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY 1, library.rec_key, library.library_id, library_nm
+	</sql>
+	
+	<!-- 반납기 요일별 통계 조회 -->
+	<sql id="getStatsReturnListByDateSql">
+		SELECT
+			log.library_key
+			,fn_library_nm(log.library_key) AS library_nm
+			,TO_CHAR(book_state_date::date, 'd')::int AS date_value
+			,SUBSTR('일월화수목금토', to_char(book_state_date::date, 'd')::int, 1) AS date_nm
+			,COUNT(id_no) AS cnt
+			,COUNT(DISTINCT id_no) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_return_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+		<where>
+			book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY log.library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 반납기 장비별 통계 조회 -->
+	<sql id="getStatsReturnListByDeviceSql">
+		SELECT
+			library.rec_key AS library_key
+			,device_key
+			,COUNT(log.id_no) AS cnt
+			,COUNT(DISTINCT log.id_no) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_return_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+		<where>
+			book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, device_key
+	</sql>
+	
+	<!-- 반납기 이용 달력 조회 -->
+	<sql id="getStatsReturnListByCalendarSql">
+		SELECT
+			date.return_date
+			,COUNT(return.id_no) AS cnt
+			,COUNT(DISTINCT return.id_no) AS user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+				SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS return_date
+			) date ON 1=1
+			LEFT OUTER JOIN tbl_api_return_use_log return ON date.return_date = TO_CHAR(return.book_state_date::date, 'YYYY-MM-DD') AND library.rec_key = return.library_key
+		GROUP BY date.return_date
+	</sql>
+	
+	<!--
+		*****[예약대출기]*****
+	-->
+	<!-- 예약대출기 기간별 통계 조회 -->
+	<sql id="getStatsResvLoanListSql">
+		SELECT
+			date.loan_date
+			,library.rec_key as library_key
+			,library.library_id
+			,library.library_nm
+			,COUNT(resvLoan.user_id) as cnt
+			,COUNT(DISTINCT resvLoan.user_id) as user_cnt
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS loan_date
+			) date ON 1=1
+			LEFT OUTER JOIN (
+				SELECT library_key, user_id, user_name, loan_date FROM tbl_api_resvLoan_use_log
+			) resvLoan ON date.loan_date = to_char(resvLoan.loan_date, #{DateFormat}) AND library.rec_key = resvLoan.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		GROUP BY date.loan_date, library.rec_key, library.library_id, library.library_nm
+	</sql>
+	
+	<!-- 예약대출기 요일별 통계 조회 -->
+	<sql id="getStatsResvLoanDateSql">
+		SELECT
+			library_key
+			,fn_library_nm(library_key) as library_nm
+			,TO_CHAR(loan_date, 'd')::int as date_value
+			,SUBSTR('일월화수목금토', TO_CHAR(loan_date, 'd')::int, 1) as date_nm
+			,COUNT(user_id) as cnt
+			,COUNT(DISTINCT user_id) as user_cnt
+		FROM
+			tbl_api_resvLoan_use_log log
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library_key, library_nm, date_value
+	</sql>
+	
+	<!-- 예약대출기 장비별 통계 조회 -->
+	<sql id="getStatsResvLoanDeviceSql">
+		SELECT
+			log.library_key
+			,library.library_nm
+			,library.library_id
+			,log.device_key
+			,device.device_nm
+			,device.device_id
+			,COUNT(log.loan_date) as cnt
+			,COUNT(DISTINCT log.user_id) as user_cnt
+		FROM
+			tbl_api_resvLoan_use_log log
+			INNER JOIN tbl_library library ON log.library_key = library.rec_key
+			INNER JOIN tbl_device device ON log.device_key = device.rec_key
+		<where>
+			log.status = 'L'
+			<if test='startDate != null and endDate != null'>
+				AND log.loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				AND log.library_key = #{library_key}
+			</if>
+		</where>
+		GROUP BY log.library_key, log.device_key, library.library_nm, library.library_id, device.device_nm, device.device_id
+	</sql>
+	
+	<!-- 예약대출기 이용 달력 조회 -->
+	<sql id="getStatsResvLoanListWithoutLibrarySql">
+		SELECT
+			date.loan_date
+			,COUNT(resvLoan.user_id) as cnt
+			,COUNT(DISTINCT resvLoan.user_id) as user_cnt
+		FROM
+			tbl_library library LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS loan_date
+			) date ON 1=1
+			LEFT OUTER JOIN (
+				SELECT library_key, device_key, user_id, user_name, loan_date FROM tbl_api_resvLoan_use_log
+			) resvLoan ON date.loan_date = to_char(resvLoan.loan_date, #{DateFormat}) AND library.rec_key = resvLoan.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				ANd library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY date.loan_date
+	</sql>
+	
+	<!--
+		*****[출입게이트]*****
+	-->
+	<!-- 출입게이트 기간별 통계 조회 (입실) -->
+	<sql id="getStatsGateInListSql">
+		SELECT
+			TO_CHAR(log_time, #{DateFormat}) AS log_date
+			,log.library_key
+			,COUNT(DISTINCT user_id) as USER_CNT
+			,COUNT(user_id) as CNT
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key AND device.device_id = log.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'I'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY log_date, log.library_key
+	</sql>
+	
+	<!-- 출입게이트 기간별 통계 조회 (퇴실) -->
+	<sql id="getStatsGateOutListSql">
+		SELECT
+			TO_CHAR(log_time, #{DateFormat}) AS log_date
+			,log.library_key
+			,COUNT(DISTINCT user_id) as USER_CNT
+			,COUNT(user_id) as CNT
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key AND device.device_id = log.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'O'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY log_date, log.library_key
+	</sql>
+	
+	<!-- 출입게이트 요일별 통계 조회 (입실) -->
+	<sql id="getStatsGateInListByDateSql">
+		SELECT	
+			gate.library_key
+			,fn_library_nm(gate.library_key) as library_nm
+			,TO_CHAR(log_time, 'd')::int as date_value
+			,SUBSTR('일월화수목금', TO_CHAR(log_time, 'd')::int, 1) as date_nm
+			,COUNT(user_id) as cnt
+			,COUNT(DISTINCT user_id) as user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log gate ON library.rec_key = gate.library_key AND device.device_id = gate.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'I'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		group by gate.library_key, library_nm, date_value, date_nm
+	</sql>
+	
+	<!-- 출입게이트 요일별 통계 조회 (퇴실) -->
+	<sql id="getStatsGateOutListByDateSql">
+		SELECT	
+			gate.library_key
+			,fn_library_nm(gate.library_key) as library_nm
+			,TO_CHAR(log_time, 'd')::int as date_value
+			,SUBSTR('일월화수목금', TO_CHAR(log_time, 'd')::int, 1) as date_nm
+			,COUNT(user_id) as cnt
+			,COUNT(DISTINCT user_id) as user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log gate ON library.rec_key = gate.library_key AND device.device_id = gate.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'O'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		group by gate.library_key, library_nm, date_value, date_nm
+	</sql>
+	
+	<!-- 출입게이트 시간별 통계 조회 (입실) -->
+	<sql id="getStatsGateInListByTimeSql">
+		SELECT
+			date.pass_time
+			,library.rec_key as library_key
+			,library.library_nm
+			,COUNT(log.user_id) as pass_in_cnt
+			,COUNT(DISTINCT user_id) as pass_in_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN GENERATE_SERIES(0, 23, 1) date(pass_time) ON 1=1
+			INNER JOIN tbl_api_gate_use_log log ON log.log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+				AND TO_CHAR(log.log_time, 'HH24')::int = date.pass_time
+				AND log.library_key = library.rec_key
+				AND log.device_id = device.device_id
+		<where>
+			log_type = 'I'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, library.library_nm, pass_time
+	</sql>
+	
+	<!-- 출입게이트 시간별 통계 조회 (퇴실) -->
+	<sql id="getStatsGateOutListByTimeSql">
+		SELECT
+			date.pass_time
+			,library.rec_key as library_key
+			,library.library_nm
+			,COUNT(log.user_id) as pass_out_cnt
+			,COUNT(DISTINCT user_id) as pass_out_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN GENERATE_SERIES(0, 23, 1) date(pass_time) ON 1=1
+			INNER JOIN tbl_api_gate_use_log log ON log.log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+				AND TO_CHAR(log.log_time, 'HH24')::int = date.pass_time
+				AND log.library_key = library.rec_key
+				AND log.device_id = device.device_id
+		<where>
+			log_type = 'O'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, library.library_nm, pass_time
+	</sql>
+	
+	<!-- 출입게이트 장비별 통계 조회 (입실) -->
+	<sql id="getStatsGateInListByDeviceSql">
+		SELECT
+			library_key
+			,device_id
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) AS user_cnt
+		FROM
+			tbl_api_gate_use_log
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'I'
+		</where>
+		GROUP BY library_key, device_id
+	</sql>
+	
+	<!-- 출입게이트 장비별 통계 조회 (퇴실) -->
+	<sql id="getStatsGateOutListByDeviceSql">
+		SELECT
+			library_key
+			,device_id
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) as user_cnt
+		FROM
+			tbl_api_gate_use_log
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'O'
+		</where>
+		GROUP BY library_key, device_id
+	</sql>
+	
+	<!-- 출입게이트 이용 달력 조회 (입실) -->
+	<sql id="getStatsGateInListWithoutLibrarySql">
+		SELECT
+			TO_CHAR(log_time,#{DateFormat}) as log_date
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key AND device.device_id = log.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'I'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY log_date
+	</sql>
+	
+	<!-- 출입게이트 이용 달력 조회 (퇴실) -->
+	<sql id="getStatsGateOutListWithoutLibrarySql">
+		SELECT
+			TO_CHAR(log_time,#{DateFormat}) as log_date
+			,COUNT(user_id) AS cnt
+			,COUNT(DISTINCT user_id) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key AND device.device_id = log.device_id
+		<where>
+			log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			AND log_type = 'O'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY log_date
+	</sql>
+	
+	<!--
+		*****[전체]*****
+	-->
+	<!-- [조회] stats.getStatsSLSReservationLoanListCnt -->
+	<select id="getStatsSLSReservationLoanListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM (<include refid="getStatsSLSReservationLoanListSql" />) a
+	</select>
+	
+	<!-- [조회] stats.getStatsSLSReservationLoanList -->
+	<select id="getStatsSLSReservationLoanList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			ROW_NUMBER() OVER(ORDER BY library_key, return_date) AS rownum ,
+			return_date ,
+			COALESCE(library_key, '-1') AS library_key ,
+			COALESCE(library_nm, '미등록 도서관')|| '[' || COALESCE(library_id, '0000')|| ']' AS library_nm ,
+			USER_CNT,
+			CNT
+		FROM (<include refid="getStatsSLSReservationLoanListSql" />) a
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+
+	<!-- [조회] stats.getStatsAllListbyUserCnt -->
+	<select id="getStatsAllListbyUserCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListSql" />) loan ON loan.library_key = library.rec_key
+				AND loan.loan_date = date.log_date
+			LEFT OUTER JOIN 
+			(<include refid="getStatsSLSReturnListSql" />) return ON return.library_key = library.rec_key 
+				AND return.return_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListbyUser -->
+	<select id="getStatsAllListbyUser" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, date.log_date) AS rownum
+			,log_date
+			,library.rec_key AS library_key
+			,library.library_nm || '[' || library.library_id || ']' AS library_nm
+			,COALESCE(loan.cnt, 0) AS loan_cnt
+			,COALESCE(return.cnt, 0) AS return_cnt
+			,COALESCE(loan.user_cnt, 0) AS loan_user
+			,COALESCE(return.user_cnt, 0) AS return_user
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListSql" />) loan ON loan.library_key = library.rec_key
+				AND loan.loan_date = date.log_date
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListSql" />) return ON return.library_key = library.rec_key 
+				AND return.return_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByDateCnt -->
+	<select id="getStatsAllListByDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_Date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByDateSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.date_value = log_date.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByDate -->
+	<select id="getStatsAllListByDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')||  '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(loan_log.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan_log.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return_log.return_cnt, 0) AS return_cnt
+			,COALESCE(return_log.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_Date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByDateSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.date_value = log_date.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY log_date.date_value
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByTimeCnt -->
+	<select id="getStatsAllListByTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByTimeSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.loan_hour::int = log_date.log_time
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByTime -->
+	<select id="getStatsAllListByTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			library.rec_key
+			,library.library_nm
+			,log_date.log_time
+			,COALESCE(loan_log.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan_log.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return_log.return_cnt, 0) AS return_cnt
+			,COALESCE(return_log.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByTimeSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.loan_hour::int = log_date.log_time
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY library.rec_key, log_date.log_time
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByDeviceCnt -->
+	<select id="getStatsAllListByDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6 
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByDeviceSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.device_key = device.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByDeviceSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByDevice -->
+	<select id="getStatsAllListByDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device.rec_key
+			,device_nm || '[' || device_id || ']' AS device_nm
+			,COALESCE(loan_log.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan_log.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return_log.return_cnt, 0) AS return_cnt
+			,COALESCE(return_log.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6 
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSLoanListByDeviceSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.device_key = device.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSReturnListByDeviceSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByCalendarCnt -->
+	<select id="getStatsAllListByCalendarCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsSLSLoanListWithoutLibrarySql" />) loan
+		LEFT OUTER JOIN (<include refid="getStatsSLSReturnListWithoutLibrarySql" />) return ON loan.return_date = return.return_date
+	</select>
+	
+	<!-- [조회] stats.getStatsAllListByCalendar -->
+	<select id="getStatsAllListbyCalendar" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY loan.return_date) AS rownum
+			,loan.return_date
+			,SUM(loan.CNT) as loan_cnt
+			,SUM(return.CNT) as return_cnt
+			,SUM(loan.USER_CNT) as loan_user
+			,SUM(return.USER_CNT) as return_user
+		FROM
+		(<include refid="getStatsSLSLoanListWithoutLibrarySql" />) loan
+		LEFT OUTER JOIN (<include refid="getStatsSLSReturnListWithoutLibrarySql" />) return ON loan.return_date = return.return_date
+		GROUP BY loan.return_date
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnListCnt -->
+	<select id="getStatsUnmannedReturnListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM	
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnListSql" />) return ON return.library_key = library.rec_key
+				AND return.return_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnList -->
+	<select id="getStatsUnmannedReturnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, date.log_date) AS rownum
+			,log_date
+			,COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']' AS library_nm
+			,COALESCE(USER_CNT, 0) AS user_cnt
+			,COALESCE(CNT, 0) AS cnt
+		FROM 
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnListSql" />) return ON return.library_key = library.rec_key
+				AND return.return_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnDateCnt -->
+	<select id="getStatsUnmannedReturnDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnDate -->
+	<select id="getStatsUnmannedReturnDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')||  '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(return_log.cnt, 0) AS cnt
+			,COALESCE(return_log.user_cnt, 0) AS user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY log_date.date_value
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnTimeCnt -->
+	<select id="getStatsUnmannedReturnTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnTime -->
+	<select id="getStatsUnmannedReturnTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			library.rec_key AS library_key
+			,library.library_nm
+			,log_date.log_time
+			,COALESCE(return_log.cnt, 0) AS cnt
+			,COALESCE(return_log.user_cnt, 0) AS user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY library.rec_key, log_date.log_time
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnDeviceCnt -->
+	<select id="getStatsUnmannedReturnDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnDeviceSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnDevice -->
+	<select id="getStatsUnmannedReturnDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device.rec_key
+			,device_nm || '[' || device_id || ']' AS device_nm
+			,COALESCE(return_log.cnt, 0) AS cnt
+			,COALESCE(return_log.user_cnt, 0) AS user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6
+			LEFT OUTER JOIN
+			(<include refid="getStatsSLSUnmannedReturnDeviceSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnCalendarCnt -->
+	<select id="getStatsUnmannedReturnCalendarCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsSLSUnmannedReturnCalendarSql" />) return
+	</select>
+	
+	<!-- [조회] stats.getStatsUnmannedReturnCalendar -->
+	<select id="getStatsUnmannedReturnCalendar" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY return.return_date) AS rownum
+			,return.return_date
+			,SUM(return.CNT) AS cnt
+			,SUM(return.USER_CNT) AS user_cnt
+		FROM
+		(<include refid="getStatsSLSUnmannedReturnCalendarSql" />) return
+		GROUP BY return.return_date
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListCnt -->
+	<select id="getStatsLoanReturnAllListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsLoanReturnLoanListSql" />) loan
+		LEFT OUTER JOIN (<include refid="getStatsLoanReturnReturnListSql" />) return ON loan.library_key = return.library_key AND loan.log_date = return.log_date
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllList -->
+	<select id="getStatsLoanReturnAllList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT	
+			ROW_NUMBER() OVER(ORDER BY loan.library_key, loan.log_date) AS rownum
+			,loan.log_date
+			,COALESCE(loan.library_key, '-1') AS library_key
+			,COALESCE(loan.library_nm, '미등록 도서관')|| '[' || COALESCE(loan.library_id, '0000')|| ']'AS library_nm 
+			,loan.CNT as loan_cnt
+			,return.CNT as return_cnt
+			,loan.USER_CNT as loan_user
+			,return.USER_CNT as return_user
+		FROM
+		(<include refid="getStatsLoanReturnLoanListSql" />) loan
+		LEFT OUTER JOIN (<include refid="getStatsLoanReturnReturnListSql" />) return ON loan.library_key = return.library_key AND loan.log_date = return.log_date
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyDateCnt -->
+	<select id="getStatsLoanReturnAllListbyDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByDateSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.date_value = log_date.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyDate -->
+	<select id="getStatsLoanReturnAllListbyDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(loan_log.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan_log.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return_log.return_cnt, 0) AS return_cnt
+			,COALESCE(return_log.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByDateSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.date_value = log_date.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByDateSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY log_date.date_value
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyTimeCnt -->
+	<select id="getStatsLoanReturnAllListbyTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByTimeSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.loan_hour::int = log_date.log_time
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListByTime -->
+	<select id="getStatsLoanReturnAllListbyTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,log_date.log_time
+			,COALESCE(loan_log.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan_log.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return_log.return_cnt, 0) AS return_cnt
+			,COALESCE(return_log.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(log_time) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByTimeSql" />) loan_log ON loan_log.library_key = library.rec_key
+				AND loan_log.loan_hour::int = log_date.log_time
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByTimeSql" />) return_log ON return_log.library_key = library.rec_key
+				AND return_log.return_hour::int = log_date.log_time
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY library_key, log_date.log_time
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyDeviceCnt -->
+	<select id="getStatsLoanReturnAllListbyDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key IN (1, 9, 10)
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByDeviceSql" /> ) loan ON loan.library_key = library.rec_key
+				AND loan.device_key = device.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByDeviceSql" />) return ON return.library_key = library.rec_key
+				AND return.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyDevice -->
+	<select id="getStatsLoanReturnAllListbyDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device.rec_key
+			,device_nm || '[' || device_id || ']' AS device_nm
+			,COALESCE(loan.loan_cnt, 0) AS loan_cnt
+			,COALESCE(loan.loan_user_cnt, 0) AS loan_user_cnt
+			,COALESCE(return.return_cnt, 0) AS return_cnt
+			,COALESCE(return.return_user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key IN (1, 9, 10)
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnLoanListByDeviceSql" /> ) loan ON loan.library_key = library.rec_key
+				AND loan.device_key = device.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsLoanReturnReturnListByDeviceSql" />) return ON return.library_key = library.rec_key
+				AND return.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyCalendarCnt -->
+	<select id="getStatsLoanReturnAllListbyCalendarCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsLoanReturnLoanListWithoutLibrarySql"/> ) loan
+		LEFT OUTER JOIN (<include refid="getStatsLoanReturnReturnListWithoutLibrarySql" />) return ON loan.log_date = return.log_date
+	</select>
+	
+	<!-- [조회] stats.getStatsLoanReturnAllListbyCalendar -->
+	<select id="getStatsLoanReturnAllListbyCalendar" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY loan.log_date) AS rownum
+			,loan.log_date
+			,SUM(loan.cnt) as loan_cnt
+			,SUM(return.cnt) as return_cnt
+			,SUM(loan.user_cnt) as loan_user
+			,SUM(return.cnt) as return_user
+		FROM
+		(<include refid="getStatsLoanReturnLoanListWithoutLibrarySql"/> ) loan
+		LEFT OUTER JOIN (<include refid="getStatsLoanReturnReturnListWithoutLibrarySql" />) return ON loan.log_date = return.log_date
+		GROUP BY loan.log_date
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListcnt -->
+	<select id="getStatsReturnListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN (
+				SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListSql" />) return ON return.library_key = library.rec_key
+				AND return.book_state_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnList -->
+	<select id="getStatsReturnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, date.log_date) AS rownum
+			,log_date
+			,library.rec_key AS library_key
+			,library.library_nm || '[' || library.library_id || ']' AS library_nm
+			,COALESCE(return.cnt, 0) AS return_cnt
+			,COALESCE(return.user_cnt, 0) AS return_user
+		FROM
+		tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS log_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListSql" />) return ON return.library_key = library.rec_key
+				AND return.book_state_date = date.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByDate -->
+	<select id="getStatsReturnListByDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_Date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListByDateSql" />) return ON library.rec_key = return.library_key
+				AND return.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByDate -->
+	<select id="getStatsReturnListByDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(return.cnt, 0) AS return_cnt
+			,COALESCE(return.user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_Date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListByDateSql" />) return ON library.rec_key = return.library_key
+				AND return.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY log_date.date_value
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByTimeCnt -->
+	<select id="getStatsReturnListByTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM (
+			SELECT
+				date.return_time
+				,library.rec_key AS library_key
+				,library.library_nm || '[' || library.library_id || ']'AS library_nm
+				,COUNT(log.id_no) AS cnt
+				,(
+					SELECT COUNT(*)
+					FROM tbl_api_return_use_log
+					WHERE SUBSTR(book_state_time, 1, 2)::int <![CDATA[<=]]> date.return_time
+						AND library_key = library.rec_key
+				) AS total_cnt
+				,COUNT(DISTINCT log.id_no) AS user_cnt
+				,(
+					SELECT COUNT(DISTINCT id_no)
+					FROM tbl_api_return_use_log
+					WHERE SUBSTR(book_state_time, 1, 2)::int <![CDATA[<=]]> date.return_time
+						AND library_key = library.rec_key
+				) AS total_user_cnt
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(return_time) ON 1 = 1
+				LEFT OUTER JOIN tbl_api_return_use_log log ON book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second') 
+					AND SUBSTR(log.book_state_time, 1, 2)::int = date.return_time
+					AND log.library_key = library.rec_key
+			<where>
+				<if test='library_key != "" and library_key != null'>	
+					AND library.rec_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>	
+					AND log.device_key = #{device_key}
+				</if>
+			</where>
+			GROUP BY library.rec_key, 3, return_time
+		) return
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByTime -->
+	<select id="getStatsReturnListByTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+				date.return_time
+				,library.rec_key AS library_key
+				,library.library_nm || '[' || library.library_id || ']'AS library_nm
+				,COUNT(log.id_no) AS cnt
+				,(
+					SELECT COUNT(*)
+					FROM tbl_api_return_use_log
+					WHERE SUBSTR(book_state_time, 1, 2)::int <![CDATA[<=]]> date.return_time
+						AND book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+						AND library_key = library.rec_key
+				) AS total_cnt
+				,COUNT(DISTINCT log.id_no) AS user_cnt
+				,(
+					SELECT COUNT(DISTINCT id_no)
+					FROM tbl_api_return_use_log
+					WHERE SUBSTR(book_state_time, 1, 2)::int <![CDATA[<=]]> date.return_time
+						AND book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+						AND library_key = library.rec_key
+				) AS total_user_cnt
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(return_time) ON 1 = 1
+				LEFT OUTER JOIN tbl_api_return_use_log log ON book_state_date::date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second') 
+					AND SUBSTR(log.book_state_time, 1, 2)::int = date.return_time
+					AND log.library_key = library.rec_key
+			<where>
+				<if test='library_key != "" and library_key != null'>	
+					AND library.rec_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>	
+					AND log.device_key = #{device_key}
+				</if>
+			</where>
+			GROUP BY library.rec_key, 3, return_time
+			ORDER BY library.rec_key, 3, return_time
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByDeviceCnt -->
+	<select id="getStatsReturnListByDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 3
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListByDeviceSql" />) return ON library.rec_key = return.library_key
+				AND device.rec_key = return.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnListByDevice -->
+	<select id="getStatsReturnListByDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device.rec_key
+			,device_nm || '[' || device_id || ']' AS device_nm
+			,COALESCE(return.cnt, 0) AS return_cnt
+			,COALESCE(return.user_cnt, 0) AS return_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 3
+			LEFT OUTER JOIN
+			(<include refid="getStatsReturnListByDeviceSql" />) return ON library.rec_key = return.library_key
+				AND device.rec_key = return.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnCalendarCnt -->
+	<select id="getStatsReturnCalendarCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsReturnListByCalendarSql" />) return
+	</select>
+	
+	<!-- [조회] stats.getStatsReturnCalendar -->
+	<select id="getStatsReturnCalendar" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY return.return_date) AS rownum
+			,return.return_date
+			,SUM(return.cnt) AS return_cnt
+			,SUM(return.user_cnt) AS return_user
+		FROM
+		(<include refid="getStatsReturnListByCalendarSql" />) return
+		GROUP BY return_date
+		ORDER  BY rownum
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanListCnt -->
+	<select id="getStatsResvLoanListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsResvLoanListSql" />) resvLoan
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanList -->
+	<select id="getStatsResvLoanList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY resvLoan.library_key, resvLoan.loan_date) AS rownum
+			,resvLoan.loan_date
+			,COALESCE(resvLoan.library_key, '-1') AS library_key
+			,COALESCE(resvLoan.library_nm, '미등록도서관') || '[' || COALESCE(resvLoan.library_id, '0000') || ']' AS library_nm
+			,resvLoan.cnt as loan_cnt
+			,resvLoan.user_cnt as loan_user
+		FROM
+		(<include refid="getStatsResvLoanListSql" />) resvLoan
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+
+	<!-- [조회] stats.getStatsResvLoanTimeCnt -->
+	<select id="getStatsResvLoanTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT (*) AS cnt
+		FROM (
+			SELECT
+				date.loan_time AS loan_hour
+				,library.rec_key
+				,library.library_nm || '[' || library.library_id || ']'AS library_nm
+				,COUNT(log.idx) AS cnt
+				,(
+					SELECT COUNT(*) 
+					FROM tbl_api_resvLoan_use_log 
+					WHERE TO_CHAR(loan_date, 'HH24')::int <![CDATA[<=]]> loan_time
+						AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+						AND status = 'L'
+						AND library_key = library.rec_key
+				) AS total_cnt
+				,COUNT(DISTINCT log.USER_ID) AS user_cnt
+				,(
+					SELECT COUNT(DISTINCT USER_ID)
+					FROM tbl_api_resvLoan_use_log 
+					WHERE TO_CHAR(loan_date, 'HH24')::int <![CDATA[<=]]> loan_time
+						AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+						AND status = 'L'
+						AND library_key = library.rec_key
+				) AS total_user_cnt
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(loan_time) ON 1 = 1
+				LEFT OUTER JOIN tbl_api_resvLoan_use_log log ON log.loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+					AND TO_CHAR(log.loan_date, 'HH24')::int = date.loan_time
+					AND log.status = 'L'
+					AND log.library_key = library.rec_key 
+			<where>
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>
+					AND log.devcie_key = #{device_key}
+				</if>
+			</where>
+			GROUP BY library.rec_key, 3, loan_time
+		) resvLoan
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanDateCnt -->
+	<select id="getStatsResvLoanDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) as cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) on 1=1
+			LEFT OUTER JOIN
+		(<include refid="getStatsResvLoanDateSql" />) resvLoan ON resvLoan.library_key = library.rec_key
+			AND resvLoan.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanDate -->
+	<select id="getStatsResvLoanDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') as library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(resvLoan.cnt, 0) AS loan_cnt
+			,COALESCE(resvLoan.user_cnt, 0) AS loan_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) on 1=1
+			LEFT OUTER JOIN
+		(<include refid="getStatsResvLoanDateSql" />) resvLoan ON resvLoan.library_key = library.rec_key
+			AND resvLoan.date_value = log_date.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY log_date.date_value
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanTime -->
+	<select id="getStatsResvLoanTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			date.loan_time AS loan_hour
+			,library.rec_key
+			,library.library_nm || '[' || library.library_id || ']'AS library_nm
+			,COUNT(log.idx) AS cnt
+			,(
+				SELECT COUNT(*) 
+				FROM tbl_api_resvLoan_use_log 
+				WHERE TO_CHAR(loan_date, 'HH24')::int <![CDATA[<=]]> loan_time
+					AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+					AND status = 'L'
+					AND library_key = library.rec_key
+			) AS total_cnt
+			,COUNT(DISTINCT log.USER_ID) AS user_cnt
+			,(
+				SELECT COUNT(DISTINCT USER_ID)
+				FROM tbl_api_resvLoan_use_log 
+				WHERE TO_CHAR(loan_date, 'HH24')::int <![CDATA[<=]]> loan_time
+					AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+					AND status = 'L'
+					AND library_key = library.rec_key
+			) AS total_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(loan_time) ON 1 = 1
+			LEFT OUTER JOIN tbl_api_resvLoan_use_log log ON log.loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+				AND TO_CHAR(log.loan_date, 'HH24')::int = date.loan_time
+				AND log.status = 'L'
+				AND log.library_key = library.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.devcie_key = #{device_key}
+			</if>
+		</where>
+		GROUP BY library.rec_key, 3, loan_time
+		ORDER BY library.rec_key, 3, loan_time
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanDeviceCnt -->
+	<select id="getStatsResvLoanDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) as cnt
+		FROM
+		(<include refid="getStatsResvLoanDeviceSql" />) resvLoan
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanDevice -->
+	<select id="getStatsResvLoanDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library_key, device_key) AS rownum
+			,library_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device_key
+			,device_nm || '[' || device_id || ']' AS device_nm
+			,cnt
+			,user_cnt
+		FROM
+		(<include refid="getStatsResvLoanDeviceSql" />) resvLoan
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanCalendarCnt -->
+	<select id="getStatsResvLoanCalendarCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+		(<include refid="getStatsResvLoanListWithoutLibrarySql" />) resvLoan
+	</select>
+	
+	<!-- [조회] stats.getStatsResvLoanCalendar-->
+	<select id="getStatsResvLoanCalendar" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY resvLoan.loan_date) AS rownum
+			,resvLoan.loan_date
+			,SUM(resvLoan.cnt) as loan_cnt
+			,SUM(resvLoan.user_cnt) as loan_user
+		FROM
+		(<include refid="getStatsResvLoanListWithoutLibrarySql" />) resvLoan
+		GROUP BY loan_date
+		ORDER BY rownum
+	</select>
+	
+	<!-- [조회] stats.getStatsGateListCnt -->
+	<select id="getStatsGateListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS pass_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListSql" />) pass_in ON library.rec_key = pass_in.library_key
+				AND pass_date = pass_in.log_date
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListSql" />) pass_out ON library.rec_key = pass_out.library_key
+				AND pass_date = pass_out.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsGateList -->
+	<select id="getStatsGateList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, pass_date) AS rownum
+			,pass_date
+			,COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library_nm, '미등록 도서관')|| '[' || COALESCE(library_id, '0000')|| ']' AS library_nm
+			,COALESCE(pass_in.user_cnt, 0) AS pass_in_user
+			,COALESCE(pass_in.cnt, 0) AS pass_in_cnt
+			,COALESCE(pass_out.user_cnt, 0) AS pass_out_user
+			,COALESCE(pass_out.cnt, 0) AS pass_out_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN
+			(
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS pass_date
+			) date ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListSql" />) pass_in ON library.rec_key = pass_in.library_key
+				AND pass_date = pass_in.log_date
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListSql" />) pass_out ON library.rec_key = pass_out.library_key
+				AND pass_date = pass_out.log_date
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] stats.getStatsGateDateCnt -->
+	<select id="getStatsGateDateCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListByDateSql" />) pass_in ON library.rec_key = pass_in.library_key
+				AND log_date.date_value = pass_in.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListByDateSql" />) pass_out ON library.rec_key = pass_out.library_key
+				AND log_date.date_value = pass_out.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsGateDate -->
+	<select id="getStatsGateDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(library.rec_key, '-1') AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')||  '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(pass_in.cnt, 0) AS pass_in_cnt
+			,COALESCE(pass_in.user_cnt, 0) AS pass_in_user_cnt
+			,COALESCE(pass_out.cnt, 0) AS pass_out_cnt
+			,COALESCE(pass_out.user_cnt, 0) AS pass_out_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) ON 1 = 1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListByDateSql" />) pass_in ON library.rec_key = pass_in.library_key
+				AND log_date.date_value = pass_in.date_value
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListByDateSql" />) pass_out ON library.rec_key = pass_out.library_key
+				AND log_date.date_value = pass_out.date_value
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY library_key
+	</select>
+	
+	<!-- [조회] stats.getStatsGateTimeCnt -->
+	<select id="getStatsGateTimeCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(pass_time) ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListByTimeSql" />) pass_in ON pass_in.pass_time = date.pass_time
+				AND pass_in.library_key = library.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListByTimeSql" />) pass_out ON pass_Out.pass_time = date.pass_time
+				AND pass_out.library_key = library.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsGateTime -->
+	<select id="getStatsGateTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			date.pass_time
+			,library.rec_key as library_key
+			,library.library_nm
+			,COALESCE(pass_in.pass_in_cnt, 0) AS pass_in_cnt
+			,COALESCE(pass_in.pass_in_user_cnt, 0) AS pass_in_user_cnt
+			,COALESCE(pass_out.pass_out_cnt, 0) AS pass_out_cnt
+			,COALESCE(pass_out.pass_out_user_cnt, 0) AS pass_out_user_cnt
+			,(
+				SELECT COUNT(*)
+				FROM tbl_api_gate_use_log
+				WHERE TO_CHAR(log_time, 'HH24')::int <![CDATA[<=]]> date.pass_time
+					AND log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+					AND library_key = library.rec_key
+			) AS total_cnt
+			,(
+				SELECT COUNT(DISTINCT USER_ID)
+				FROM tbl_api_gate_use_log
+				WHERE TO_CHAR(log_time, 'HH24')::int <![CDATA[<=]]> date.pass_time
+					AND log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+					AND library_key = library.rec_key
+			) AS total_user_cnt
+		FROM
+			tbl_library library
+			LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) date(pass_time) ON 1=1
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateInListByTimeSql" />) pass_in ON pass_in.pass_time = date.pass_time
+				AND pass_in.library_key = library.rec_key
+			LEFT OUTER JOIN
+			(<include refid="getStatsGateOutListByTimeSql" />) pass_out ON pass_Out.pass_time = date.pass_time
+				AND pass_out.library_key = library.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY library_key, date.pass_time
+	</select>
+	
+	<!-- [조회] stats.getStatsGateDeviceCnt -->
+	<select id="getStatsGateDeviceCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) as cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(<include refid="getStatsGateInListByDeviceSql" />) pass_in ON library.rec_key = pass_in.library_key AND device.device_id = pass_in.device_id
+			INNER JOIN
+			(<include refid="getStatsGateOutListByDeviceSql" />) pass_out ON library.rec_key = pass_out.library_key AND device.device_id = pass_out.device_id
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] stats.getStatsGateDevice -->
+	<select id="getStatsGateDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key AS library_key
+			,library_nm || '[' || library_id || ']' AS library_nm
+			,device.rec_key as device_key
+			,device_nm || '[' || device.device_id || ']' AS device_nm
+			,COALESCE(pass_in.cnt) AS pass_in_cnt
+			,COALESCE(pass_in.user_cnt) AS pass_in_user_cnt
+			,COALESCE(pass_out.cnt) AS pass_out_cnt
+			,COALESCE(pass_out.user_cnt) AS pass_out_user_cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN
+			(<include refid="getStatsGateInListByDeviceSql" />) pass_in ON library.rec_key = pass_in.library_key AND device.device_id = pass_in.device_id
+			INNER JOIN
+			(<include refid="getStatsGateOutListByDeviceSql" />) pass_out ON library.rec_key = pass_out.library_key AND device.device_id = pass_out.device_id
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	
+	<!--
+		*****[분실방지기]*****
+	-->
+	
+	<!-- [조회] 분실방지기 - 일별 통계 -->
+	<select id="getStatsAntiLostDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, log_date.date_value) AS rownum
+			,COALESCE(library.rec_key, '-1') as library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,SUBSTR('일월화수목금토', log_date.date_value, 1) as date_nm
+			,COALESCE(anti.cnt, 0) AS cnt
+			,COALESCE(book.cnt, 0) AS book_cnt
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN GENERATE_SERIES(1, 7, 1) log_date(date_value) on 1=1
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'd')::int as date
+				,library_key
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT log
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY date, library_key
+		) anti ON anti.library_key = library.rec_key AND anti.date = log_date.date_value
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'd')::int as date
+				,library_key
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK log
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY date, library_key
+		) book ON book.library_key = library.rec_key AND book.date = log_date.date_value
+		<where>
+			<choose>
+				<when test="device_id != null and device_id != ''">
+					AND library.rec_key IN (SELECT library_key FROM TBL_DEVICE WHERE device_id = #{device_id})				
+				</when>
+				<otherwise>
+					<if test='library_key != "" and library_key != null'>
+						AND library.rec_key = #{library_key}
+					</if>
+				</otherwise>
+			</choose>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] 분실방지기 - 날짜별 통계 -->
+	<select id="getStatsAntiLostDay" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, date.date) AS rownum
+			,COALESCE(library.rec_key, '-1') as library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,date.date AS date
+			,COALESCE(anti.cnt, 0) AS cnt
+			,COALESCE(book.cnt, 0) AS book_cnt
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN (
+			SELECT TO_CHAR(GENERATE_SERIES(TO_DATE(#{startDate}, #{SeriesFormat}), (TO_DATE(#{endDate}, #{SeriesFormat}) - INTERVAL '1 second'), #{Series}::interval), #{DateFormat}) AS date
+		) date ON 1=1
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, #{DateFormat}) as date
+				,library_key
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT log
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY date, library_key
+		) anti ON anti.library_key = library.rec_key AND anti.date = date.date
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, #{DateFormat}) as date
+				,library_key
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK log
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY date, library_key
+		) book ON book.library_key = library.rec_key AND book.date = date.date
+		<where>
+			<choose>
+				<when test="device_id != null and device_id != ''">
+					AND library.rec_key IN (SELECT library_key FROM TBL_DEVICE WHERE device_id = #{device_id})				
+				</when>
+				<otherwise>
+					<if test='library_key != "" and library_key != null'>
+						AND library.rec_key = #{library_key}
+					</if>
+				</otherwise>
+			</choose>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] 분실방지기 - 시간별 통계 -->
+	<select id="getStatsAntiLostTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, log_date.date_value) AS rownum
+			,COALESCE(library.rec_key, '-1') as library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,log_date.date_value AS date
+			,COALESCE(anti.cnt, 0) AS cnt
+			,COALESCE(book.cnt, 0) AS book_cnt
+		FROM TBL_LIBRARY library
+		LEFT OUTER JOIN GENERATE_SERIES(0, 23, 1) log_date(date_value) ON 1=1
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'HH24')::int AS time
+				,library_key
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY time, library_key
+		) anti ON anti.library_key = library.rec_key AND anti.time = log_date.date_value
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'HH24')::int AS time
+				,library_key
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY time, library_key
+		) book ON book.library_key = library.rec_key AND book.time = log_date.date_value
+		<where>
+			<choose>
+				<when test="device_id != null and device_id != ''">
+					AND library.rec_key IN (SELECT library_key FROM TBL_DEVICE WHERE device_id = #{device_id})				
+				</when>
+				<otherwise>
+					<if test='library_key != "" and library_key != null'>
+						AND library.rec_key = #{library_key}
+					</if>
+				</otherwise>
+			</choose>
+		</where>
+		ORDER BY rownum
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<select id="getStatsAntiLostDeviceCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_LIBRARY library
+		INNER JOIN TBL_DEVICE device ON device.library_key = library.rec_key AND device.model_key = 5
+	</select>
+	
+	<!-- [조회] stats.getStatsAntiLostDevice -->
+	<select id="getStatsAntiLostDevice" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY library.rec_key, device.rec_key) AS rownum
+			,library.rec_key AS library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']'AS library_nm
+			,device.device_nm || '[' || device.device_id || ']' AS device_nm
+			,COALESCE(anti.cnt, 0) AS cnt
+			,COALESCE(book.cnt, 0) AS book_cnt
+		FROM TBL_LIBRARY library
+		INNER JOIN TBL_DEVICE device ON device.library_key = library.rec_key AND device.model_key = 5
+		LEFT JOIN (
+			SELECT
+				device_id
+				,library_key
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY device_id, library_key
+		) anti ON anti.library_key = library.rec_key AND anti.device_id = device.device_id
+		LEFT JOIN (
+			SELECT
+				device_id
+				,library_key
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND (TO_DATE(#{endDate}, 'YYYY-MM-DD') - INTERVAL '1 second')
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			GROUP BY device_id, library_key
+		) book ON book.library_key = library.rec_key AND book.device_id = device.device_id
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rownum
+	</select>
+</mapper>
+

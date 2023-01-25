@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="apiAntilost">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	
+	<select id="getDBConnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key 
+			,db_classname
+			,db_url
+			,db_username
+			,db_password
+		FROM TBL_API_ANTILOST_DBCONN
+		<where>
+			<if test="library_key != null">
+				AND library_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY rec_key ASC
+	</select>
+	
+	<select id="getBookHistoryMax" parameterType="map" resultType="map">
+		SELECT TO_CHAR(MAX(log_date), 'YYYY-MM-DD HH24:MI:SS.MS') AS log_date
+		FROM TBL_API_ANTILOST_BOOK
+		WHERE conn_key = #{conn_key}
+		GROUP BY conn_key
+	</select>
+	<insert id="insertBookHistoryInfo" parameterType="map">
+		INSERT INTO TBL_API_ANTILOST_BOOK (
+			conn_key
+			,library_key
+			,device_id
+			,log_date
+			,book_no
+			,book_title
+		)
+		VALUES
+		<foreach collection="bookList" item="book"  separator=",">
+			(
+				#{conn_key}
+				,#{library_key}
+				,#{book.device_id}
+				,#{book.log_date}
+				,#{book.book_no}
+				,#{book.book_title}
+			)
+		</foreach>
+	</insert>
+	
+	<select id="getCountHistoryMax" parameterType="map" resultType="map">
+		SELECT TO_CHAR(MAX(log_date), 'YYYY-MM-DD HH24:MI:SS.MS') AS log_date
+		FROM TBL_API_ANTILOST_CNT
+		WHERE conn_key = #{conn_key}
+		GROUP BY conn_key
+	</select>
+	
+	<insert id="insertCountHistoryInfo" parameterType="map">
+		INSERT INTO TBL_API_ANTILOST_CNT (
+			conn_key
+			,library_key
+			,device_id
+			,log_date
+			,cnt
+		)
+		VALUES
+		<foreach collection="countList" item="count" separator=",">
+			(
+				#{conn_key}
+				,#{library_key}
+				,#{count.device_id}
+				,#{count.log_date}
+				,#{count.cnt}
+			)
+		</foreach>
+	</insert>
+</mapper>

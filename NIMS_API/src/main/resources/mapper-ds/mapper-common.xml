@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="common">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	
+	<!-- [조회] common.getCategoryList -->
+	<select id="getCategoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+	SELECT
+		C.code AS menu_category
+		,C.code_value AS menu_folder
+		,C.code_value2 AS menu_category_nm
+		,C.code_value3 AS menu_icon
+	FROM
+		tbl_code C
+	WHERE
+		C.grp_key = 1
+		AND use_yn = 'Y'
+		AND C.code IN (
+			SELECT
+				menu_category
+			FROM
+				tbl_menu
+			WHERE
+				use_yn = 'Y'
+				<if test='manager_grade != "" and manager_grade != null'>
+					AND #{manager_grade} <![CDATA[<=]]> menu_grade
+				</if>
+				<if test='manager_grade > 0'>
+					<if test='model_auth != "" and model_auth != null'>
+						AND (model_auth is null or model_auth IN 
+							(
+								SELECT
+									model_type::integer
+								FROM
+									tbl_model
+								WHERE
+									rec_key IN
+									<foreach item="item" index="index" collection="model_auth" open="(" separator="," close=")">
+										#{item}
+									</foreach> 
+							)
+						)
+					</if>
+				</if>
+			)
+	ORDER BY C.rec_key
+	</select>
+	
+	<!-- [조회] common.getSubCategoryList -->
+	<select id="getSubCategoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+	SELECT
+		C.code AS menu_category
+		,C.code_value AS menu_folder
+		,SC.code_value AS sub_menu_id
+		,SC.code_value2 AS sub_menu_nm
+	FROM
+		tbl_code C 
+		inner join tbl_menu_sub_category MSC on C.code = MSC.menu_category
+		inner join tbl_code SC on MSC.menu_sub_category = SC.code
+	WHERE
+		C.grp_key = 1
+		AND SC.grp_key = 18
+		AND C.code IN (
+			SELECT
+				menu_category
+			FROM
+				tbl_menu
+			WHERE
+				use_yn = 'Y'
+				<if test='manager_grade != "" and manager_grade != null'>
+					AND #{manager_grade} <![CDATA[<=]]> menu_grade
+				</if>
+			)
+	ORDER BY C.rec_key, SC.rec_key
+	</select>
+	
+	<!-- [조회] common.getMenuList -->
+	<select id="getMenuList" parameterType="map" resultType="java.util.LinkedHashMap">
+	SELECT 
+		C.code_value as menu_folder
+		, M.menu_url
+		, M.menu_nm
+		, M.use_yn
+		, (SELECT code_value FROM tbl_code WHERE code = M.menu_sub_category AND grp_key = 18) AS sub_menu_id
+	FROM 
+		tbl_code C inner join tbl_menu M on C.code = M.menu_category
+		WHERE
+			M.use_yn = 'Y'
+			AND C.grp_key = 1
+			<if test='reserve_loan != "Y"'>
+				AND menu_url NOT LIKE '%statsReservationLoanInfo%'
+			</if>
+			<if test='manager_grade != "" and manager_grade != null'>
+				AND #{manager_grade} <![CDATA[<=]]> M.menu_grade
+			</if>
+	ORDER BY C.rec_key, M.seq
+	</select>
+	
+</mapper>

@@ -1,0 +1,1008 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 스마트 도서관 연계 데이터 CRUD -->
+<mapper namespace="apiSlibrary">
+	<resultMap id="map" type="java.util.HashMap" />
+
+	<cache />
+	<!-- [조회] apiSlibrary.getSLSBookInfo -->
+	<select id="getSLSBookInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_sls_book
+		<where>
+			<if test='library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+			<if test='id != null'>
+				AND id	= #{id}
+			</if>
+		</where>
+	</select>
+	<!-- [조회] apiSlibrary.getSLSBookList -->
+	<select id="getSLSBookList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,id
+		FROM tbl_api_sls_book
+		<where>
+			<if test='library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiSlibrary.insertSLSBookInfo  -->
+	<insert id="insertSLSBookInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_book(
+			library_key
+			,device_key
+			,id
+			,state
+			,equip_id
+			,tray
+			,slot
+			,book_key
+			,book_no
+			,isbn
+			,rfid
+			,insert_date
+			,loan_date
+			,return_date
+			,return_plan_date
+			,user_key
+			,class_no
+			,book_code
+			,vol_code
+			,copy_code
+			,user_no
+			,title
+			,author
+			,publisher
+			,info
+			,reserve_date
+			,image
+			,reserve_expire_date
+			,pub_date
+			,loc_type
+			,manage_code
+			,drum
+			,first_work
+			,last_work
+			,book_status
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{id}
+			,#{state}
+			,#{equip_id}
+			,#{tray}
+			,#{slot}
+			,#{book_key}
+			,#{book_no}
+			,#{isbn}
+			,#{rfid}
+			,CASE WHEN #{insert_date}='' THEN NULL ELSE #{insert_date}::timestamp END
+			,CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp END
+			,CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::date END
+			,#{user_key}
+			,#{class_no}
+			,#{book_code}
+			,#{vol_code}
+			,#{copy_code}
+			,#{user_no}
+			,#{title}
+			,#{author}
+			,#{publisher}
+			,#{info}
+			,CASE WHEN #{reserve_date}='' THEN NULL ELSE #{reserve_date}::timestamp END
+			,#{image}
+			,CASE WHEN #{reserve_expire_date}='' THEN NULL ELSE #{reserve_expire_date}::timestamp END
+			,CASE WHEN #{pub_date}='' THEN NULL ELSE #{pub_date}::timestamp END
+			,#{loc_type}
+			,#{manage_code}
+			,#{drum}
+			,#{worker}
+			,#{worker}
+			,#{book_status}
+		)
+	</insert>
+	<!-- [수정] apiSlibrary.updateSLSBookInfo -->
+	<update id="updateSLSBookInfo" parameterType="map">
+		UPDATE tbl_api_sls_book
+		   SET
+			library_key=#{library_key}
+			,device_key=#{device_key}
+			,id=#{id}
+			,state=#{state}
+			,equip_id=#{equip_id}
+			,tray=#{tray}
+			,slot=#{slot}
+			,book_key=#{book_key}
+			,book_no=#{book_no}
+			,isbn=#{isbn}
+			,rfid=#{rfid}
+			,insert_date=CASE WHEN #{insert_date}='' THEN NULL ELSE #{insert_date}::timestamp END
+			,loan_date=CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,return_date=CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp END
+			,return_plan_date=CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::date END
+			,user_key=#{user_key}
+			,class_no=#{class_no}
+			,book_code=#{book_code}
+			,vol_code=#{vol_code}
+			,copy_code=#{copy_code}
+			,user_no=#{user_no}
+			,title=#{title}
+			,author=#{author}
+			,publisher=#{publisher}
+			,info=#{info}
+			,reserve_date=CASE WHEN #{reserve_date}='' THEN NULL ELSE #{reserve_date}::timestamp END
+			,image=#{image}
+			,reserve_expire_date=CASE WHEN #{reserve_expire_date}='' THEN NULL ELSE #{reserve_expire_date}::timestamp END
+			,pub_date=CASE WHEN #{pub_date}='' THEN NULL ELSE #{pub_date}::timestamp END
+			,loc_type=#{loc_type}
+			,manage_code=#{manage_code}
+			,drum=#{drum}
+			,last_work=#{worker}
+			,update_date=#{now}::timestamp
+			,book_status=#{book_status}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [수정] apiSlibrary.syncSLSBookStatus  -->
+	<update id="syncSLSBookStatus" parameterType="map">
+		UPDATE tbl_api_sls_book
+		   SET
+			book_status = '0'
+		WHERE
+			(update_date != #{now}::timestamp
+			AND book_status = '1')
+			OR update_date is null
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSCasInfoList -->
+	<select id="getSLSCasInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,T1.library_key
+			,T1.device_key
+			,T1.no
+			,T1.drum
+			,T1.tray
+			,T1.slot
+			,(CASE WHEN T1.drum = '1' THEN '전면' ELSE '후면' END) || ' - ' || T1.tray as drumTrayName
+			,T1.drum || '-' || T1.tray as drumTrayValue
+			,T1.book_no
+			,T2.title
+			,T1.rfid
+			,T1.usage
+			,T1.cas_type
+			,T1.update_date
+			,T1.book_type
+			,T1.equip_id
+			,T1.exist_yn
+			,T1.proc_yn
+			,T1.enable_yn
+		FROM tbl_api_sls_cas_list T1
+		LEFT OUTER JOIN tbl_api_sls_book T2 on T1.book_no = T2.book_no AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key AND t2.book_status = '1'
+		<where>
+			T1.device_key = #{device_key}
+			<if test='library_key != "" and library_key != null'>
+				AND T1.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND T1.device_key = #{device_key}
+			</if>
+			<if test='no != "" and no != null'>
+				AND T1.no = #{no}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND T1.send_req_yn	= #{send_req_yn}
+			</if>
+		</where>
+		ORDER BY T1.drum, T1.tray, T1.slot::int desc
+	</select>
+
+	<!-- [조회] apiSlibrary.getSLSCasInfo -->
+	<select id="getSLSCasInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,no
+			,enable_yn
+			,send_req_yn
+		FROM tbl_api_sls_cas_list
+		<where>
+		<if test='library_key != null'>
+			AND library_key	= #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key	= #{device_key}
+		</if>
+		<if test='no != null'>
+			AND no	= #{no}
+		</if>
+		<if test='send_req_yn != "" and send_req_yn != null'>
+			AND send_req_yn = #{send_req_yn}
+		</if>
+		</where>
+	</select>
+
+
+	<!-- [등록] apiSlibrary.insertSLSCasInfo  -->
+	<insert id="insertSLSCasInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_cas_list(
+			library_key
+			,device_key
+			,no
+			,tray
+			,slot
+			,book_no
+			,rfid
+			,usage
+			,cas_type
+			,update_date
+			,drum
+			,book_type
+			,equip_id
+			,exist_yn
+			,proc_yn
+			,enable_yn
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{no}
+			,#{tray}
+			,#{slot}
+			,#{book_no}
+			,#{rfid}
+			,#{usage}
+			,#{cas_type}
+			,CASE WHEN #{update_date}='' THEN NULL ELSE #{update_date}::timestamp END
+<!-- 			TO_TIMESTAMP(#{update_date}, 'YYYY-MM-DD HH24:MI:SS') -->
+			,#{drum}
+			,#{book_type}
+			,#{equip_id}
+			,#{exist_yn}
+			,#{proc_yn}
+			,#{enable_yn}
+		)
+	</insert>
+
+	<!-- [수정] apiSlibrary.updateSLSCasInfo -->
+	<update id="updateSLSCasInfo" parameterType="map">
+		UPDATE tbl_api_sls_cas_list
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,no = #{no}
+			,tray = #{tray}
+			,slot = #{slot}
+			,book_no = #{book_no}
+			,rfid = #{rfid}
+			,usage = #{usage}
+			,cas_type = #{cas_type}
+			,update_date = now()::timestamp
+			,drum = #{drum}
+			,book_type = #{book_type}
+			,equip_id = #{equip_id}
+			,exist_yn = #{exist_yn}
+			,proc_yn = #{proc_yn}
+			,enable_yn = #{enable_yn}
+			<if test='send_req_yn != "" and send_req_yn != null'>
+			,send_req_yn = #{send_req_yn}
+			</if>
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [수정] apiSlibrary.updateSLSCasEnable -->
+	<update id="updateSLSCasEnable" parameterType="map">
+		UPDATE tbl_api_sls_cas_list
+		   SET
+			enable_yn = #{enable_yn}
+			,send_req_yn = 'Y'
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [수정] apiSlibrary.updateSLSCasBatchEnable -->
+	<update id="updateSLSCasBatchEnable" parameterType="map">
+		UPDATE tbl_api_sls_cas_list
+		   SET
+			<choose>
+				<when test='action == "use-all"'>
+					enable_yn = 'Y'
+				</when>
+				<when test='action == "disable-all"'>
+					enable_yn = 'N'
+				</when>
+				<when test='action == "even-use"'>
+					enable_yn = CASE WHEN (slot::int % 2) = 0 THEN 'Y' ELSE 'N' END
+				</when>
+				<when test='action == "odd-use"'>
+					enable_yn = CASE WHEN (slot::int % 2) = 1 THEN 'Y' ELSE 'N' END
+				</when>
+				<otherwise>
+					enable_yn = enable_yn
+				</otherwise>
+			</choose>
+			,send_req_yn = 'Y'
+		<where>
+			library_key = #{library_key}
+			AND device_key = #{device_key}
+			and drum || '-' || tray = #{drumTrayValue}
+		</where>
+	</update>
+
+	<!-- [수정] apiSlibrary.updateSLSCasType -->
+	<update id="updateSLSCasType" parameterType="map">
+		UPDATE tbl_api_sls_cas_list
+			SET
+				cas_type = #{cas_type}
+				,send_req_yn = 'Y'
+			WHERE
+				library_key = #{library_key}
+				AND device_key = #{device_key}
+				AND drum = #{drum}
+				AND tray = #{tray}
+	</update>
+
+	<!-- [수정] apiSlibrary.updateSLSCasSendResult -->
+	<update id="updateSLSCasSendResult" parameterType="map">
+		UPDATE tbl_api_sls_cas_list
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+
+	<!-- [조회] api.getRuleInfo -->
+	<select id="getSLSRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,device_key
+			,id
+			,value_name
+			,description
+			,opt01
+			,opt02
+			,opt03
+			,opt04
+			,enable
+			,update_date
+			,worker
+			,send_req_yn
+		FROM
+			tbl_device_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+			<if test='id != "" and id != null'>
+				AND id	= #{id}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn	= #{send_req_yn}
+			</if>
+		</where>
+	</select>
+
+
+	<!-- [등록] api.insertRuleInfo  -->
+	<insert id="insertSLSRuleInfo" parameterType="map">
+		INSERT INTO tbl_device_rule(
+			library_key
+			,device_key
+			,id
+			,value_name
+			,description
+			,opt01
+			,opt02
+			,opt03
+			,opt04
+			,enable
+			,update_date
+			,worker
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{id}
+			,#{value_name}
+			,#{description}
+			,#{opt01}
+			,#{opt02}
+			,#{opt03}
+			,#{opt04}
+			,#{enable}
+			,CASE WHEN #{update_date}='' THEN NULL ELSE #{update_date}::timestamp END
+<!-- 			TO_TIMESTAMP(#{update_date}, 'YYYY-MM-DD HH24:MI:SS') -->
+			,#{worker}
+		)
+	</insert>
+	<!-- [수정] api.updateRuleInfo  -->
+	<update id="updateSLSRuleInfo" parameterType="map">
+		UPDATE tbl_device_rule
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,id = #{id}
+			,value_name = #{value_name}
+			,description = #{description}
+			,opt01 = #{opt01}
+			,opt02 = #{opt02}
+			,opt03 = #{opt03}
+			,opt04 = #{opt04}
+			,enable = #{enable}
+			,update_date = CASE WHEN #{update_date}='' THEN NULL ELSE #{update_date}::timestamp END
+			,worker = #{worker}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	<!-- [수정] api.updateSLSRuleSendResult  -->
+	<update id="updateSLSRuleSendResult" parameterType="map">
+		UPDATE tbl_device_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSReservationInfo -->
+	<select id="getSLSReservationInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_sls_reservation
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+			<if test='id != "" and id != null'>
+				AND id	= #{id}
+			</if>
+		</where>
+	</select>
+	<!-- [등록] apiSlibrary.insertSLSReservationInfo  -->
+	<insert id="insertSLSReservationInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_reservation(
+			library_key
+			,device_key
+			,id
+			,user_no
+			,user_name
+			,book_no
+			,status
+			,title
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,reserve_date
+			,reserve_expire_date
+			,isbn
+			,rfid
+			,mobile
+			,equip_id
+			,loan_date
+			,return_plan_date
+			,loan_success
+			,first_work
+			,last_work
+			,manage_code
+			,lib_name
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{id}
+			,#{user_no}
+			,#{user_name}
+			,#{book_no}
+			,#{status}
+			,#{title}
+			,#{author}
+			,#{publisher}
+			,#{vol_code}
+			,#{call_no}
+			,#{location_no}
+			,#{location_name}
+			,#{reserve_date}
+			,#{reserve_expire_date}
+			,#{isbn}
+			,#{rfid}
+			,#{mobile}
+			,#{equip_id}
+			,CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp END
+			,#{loan_success}
+			,#{first_work}
+			,#{last_work}
+			,#{manage_code}
+			,#{lib_name}
+		)
+	</insert>
+	<!-- [수정] apiSlibrary.updateSLSReservationInfo  -->
+	<update id="updateSLSReservationInfo" parameterType="map">
+		UPDATE tbl_api_sls_reservation
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,id = #{id}
+			,user_no = #{user_no}
+			,user_name = #{user_name}
+			,book_no = #{book_no}
+			,status = #{status}
+			,title = #{title}
+			,author = #{author}
+			,publisher = #{publisher}
+			,vol_code = #{vol_code}
+			,call_no = #{call_no}
+			,location_no = #{location_no}
+			,location_name = #{location_name}
+			,reserve_date = #{reserve_date}
+			,reserve_expire_date = #{reserve_expire_date}
+			,isbn = #{isbn}
+			,rfid = #{rfid}
+			,mobile = #{mobile}
+			,equip_id = #{equip_id}
+			,loan_date = CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,return_plan_date = CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp END
+			,loan_success = #{loan_success}
+			,first_work = #{first_work}
+			,last_work = #{last_work}
+			,manage_code = #{manage_code}
+			,lib_name = #{lib_name}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSReturnInfo -->
+	<select id="getSLSReturnInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_sls_return
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+			<if test='id != "" and id != null'>
+				AND id	= #{id}
+			</if>
+		</where>
+	</select>
+	<!-- [등록] apiSlibrary.insertSLSReturnInfo  -->
+	<insert id="insertSLSReturnInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_return(
+			library_key
+			,device_key
+			,id
+			,log_date
+			,log_time
+			,user_id
+			,user_name
+			,book_no
+			,state
+			,loan_date
+			,return_plan_date
+			,return_success
+			,rfid
+			,title
+			,return_date
+			,out_date
+			,author
+			,publisher
+			,manage_code
+			,loc_code
+			,loc_name
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{id}
+			,#{log_date}
+			,#{log_time}
+			,#{user_id}
+			,#{user_name}
+			,#{book_no}
+			,#{state}
+			,CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp END
+			,#{return_success}
+			,#{rfid}
+			,#{title}
+			,CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp END
+			,CASE WHEN #{out_date}='' THEN NULL ELSE #{out_date}::timestamp END
+			,#{author}
+			,#{publisher}
+			,#{manage_code}
+			,#{loc_code}
+			,#{loc_name}
+		)
+	</insert>
+	<!-- [수정] apiSlibrary.updateSLSReturnInfo  -->
+	<update id="updateSLSReturnInfo" parameterType="map">
+		UPDATE tbl_api_sls_return
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,id = #{id}
+			,log_date = #{log_date}
+			,log_time = #{log_time}
+			,user_id = #{user_id}
+			,user_name = #{user_name}
+			,book_no = #{book_no}
+			,state = #{state}
+			,loan_date = CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,return_plan_date = CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp END
+			,return_success = #{return_success}
+			,rfid = #{rfid}
+			,title = #{title}
+			,return_date = CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp END
+			,out_date = CASE WHEN #{out_date}='' THEN NULL ELSE #{out_date}::timestamp END
+			,author = #{author}
+			,publisher = #{publisher}
+			,manage_code = #{manage_code}
+			,loc_code = #{loc_code}
+			,loc_name = #{loc_name}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSUseLogInfo -->
+	<select id="getSLSUseLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_sls_use_log
+		<where>
+			<if test='library_key != null'>
+				AND library_key	= #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key	= #{device_key}
+			</if>
+			<if test='id != null'>
+				AND id	= #{id}
+			</if>
+		</where>
+	</select>
+	<!-- [등록] apiSlibrary.insertSLSUseLogInfo  -->
+	<insert id="insertSLSUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_use_log(
+			library_key
+			,device_key
+			,id
+			,log_date
+			,log_time
+			,user_id
+			,user_name
+			,book_no
+			,state
+			,loan_date
+			,return_plan_date
+			,return_date
+			,loan_success
+			,return_success
+			,phone_number
+			,point
+			,loan_equip_id
+			,return_equip_id
+			,class_name
+			,gender
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{id}
+			,#{log_date}
+			,#{log_time}
+			,#{user_id}
+			,#{user_name}
+			,#{book_no}
+			,#{state}
+			,CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp END
+			,CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp END
+			,CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp END
+			,#{loan_success}
+			,#{return_success}
+			,#{phone_number}
+			,#{point}
+			,#{loan_equip_id}
+			,#{return_equip_id}
+			,#{class_name}
+			,#{gender}
+		)
+	</insert>
+	<!-- [수정] apiSlibrary.updateSLSUseLogInfo  -->
+	<update id="updateSLSUseLogInfo" parameterType="map">
+		UPDATE tbl_api_sls_use_log
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,id = #{id}
+			,log_date = #{log_date}
+			,log_time = #{log_time}
+			,user_id = #{user_id}
+			,user_name = #{user_name}
+			,book_no = #{book_no}
+			,state = #{state}
+			,loan_date = CASE WHEN #{loan_date}='' THEN NULL ELSE #{loan_date}::timestamp  END
+			,return_plan_date = CASE WHEN #{return_plan_date}='' THEN NULL ELSE #{return_plan_date}::timestamp  END
+			,return_date = CASE WHEN #{return_date}='' THEN NULL ELSE #{return_date}::timestamp  END
+			,loan_success = #{loan_success}
+			,return_success = #{return_success}
+			,phone_number = #{phone_number}
+			,point = #{point}
+			,loan_equip_id = #{loan_equip_id}
+			,return_equip_id = #{return_equip_id}
+			,class_name = #{class_name}
+			,gender = #{gender}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSDrumRuleInfo -->
+	<select id="getSLSDrumRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,device_key
+			,no
+			,step
+			,posi
+			,use
+			,volume
+			,grade
+			,last_work
+			,error_msg
+			,use_smartlib
+			,use_reserve
+			,use_other_loc_return
+			,use_other_lib_return
+			,update_date
+			,worker
+			,send_req_yn
+		FROM
+			tbl_drum_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='no != "" and no != null'>
+				AND no = #{no}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+	</select>
+	<!-- [등록] apiSlibrary.insertSLSDrumRuleInfo -->
+	<insert id="insertSLSDrumRuleInfo" parameterType="map">
+		INSERT INTO tbl_drum_rule(
+			library_key
+			,device_key
+			,no
+			,step
+			,posi
+			,use
+			,volume
+			,grade
+			,last_work
+			,error_msg
+			,use_smartlib
+			,use_reserve
+			,use_other_loc_return
+			,use_other_lib_return
+			,update_date
+			,worker
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{no}
+			,#{step}
+			,#{posi}
+			,#{use}
+			,#{volume}
+			,#{grade}
+			,#{last_work}
+			,#{error_msg}
+			,#{use_smartlib}
+			,#{use_reserve}
+			,#{use_other_loc_return}
+			,#{use_other_lib_return}
+			,CASE WHEN #{update_date}='' THEN NULL ELSE #{update_date}::timestamp END
+			,#{worker}
+		)
+	</insert>
+	<!-- [수정] apiSlibrary.updateSLSDrumRuleInfo -->
+	<update id="updateSLSDrumRuleInfo" parameterType="map">
+		UPDATE tbl_drum_rule
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,no = #{no}
+			,step = #{step}
+			,posi = #{posi}
+			,use = #{use}
+			,volume = #{volume}
+			,grade = #{grade}
+			,last_work = #{last_work}
+			,error_msg = #{error_msg}
+			,use_smartlib = #{use_smartlib}
+			,use_reserve = #{use_reserve}
+			,use_other_loc_return = #{use_other_loc_return}
+			,use_other_lib_return = #{use_other_lib_return}
+			,update_date = CASE WHEN #{update_date}='' THEN NULL ELSE #{update_date}::timestamp END
+			,worker = #{worker}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	<!-- [수정] apiSlibrary.updateSLSDrumRuleSendResult -->
+	<update id="updateSLSDrumRuleSendResult" parameterType="map">
+		UPDATE tbl_drum_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiSlibrary.getSLSBookOutInfoListCnt -->
+	<select id="getSLSBookOutInfoListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) as cnt
+		FROM
+			tbl_api_sls_book_out bookOut
+			LEFT OUTER JOIN tbl_library library ON bookOut.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device ON bookOut.device_key = device.rec_key
+			LEFT OUTER JOIN tbl_api_sls_book book ON bookOut.library_key = book.library_key AND bookOut.device_key = book.device_key AND bookOut.book_key = book.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND bookOut.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND bookOut.device_key = #{device_key}
+			</if>
+			<if test='id != "" and id != null'>
+				AND bookOut.id = #{id}
+			</if>
+			<if test='title != "" and title != null'>
+				AND book.title LIKE '%' || #{title} || '%'
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				AND bookOut.book_no = #{book_no}
+			</if>
+			<if test='bookout_status != "" and bookout_status != null'>
+				AND bookOut.status = #{bookout_status}
+			</if>
+		</where>
+	</select>
+
+	<!-- [조회] apiSlibrary.getSLSBookOutInfoList -->
+	<select id="getSLSBookOutInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			bookOut.rec_key
+			,book.rec_key as book_key
+			,library.library_nm || '['||library.library_id||']' as library_nm
+			,library.library_id
+			,bookOut.library_key
+			,device.device_nm || '['||device.device_id||']' as device_nm
+			,device_id
+			,bookOut.device_key
+			,bookOut.id
+			,book.title
+			,book.author
+			,book.publisher
+			,bookOut.rfid
+			,bookOut.book_no
+			,TO_CHAR(bookOut.add_date, 'YYYY-MM-DD hh24:mi:ss') as add_date
+			,TO_CHAR(bookOut.out_date, 'YYYY-MM-DD hh24:mi:ss') as out_date
+			,TO_CHAR(bookOut.cancel_date, 'YYYY-MM-DD hh24:mi:ss') as cancel_date
+			,bookOut.status
+		FROM
+			tbl_api_sls_book_out bookOut
+			LEFT OUTER JOIN tbl_library library ON bookOut.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device ON bookOut.device_key = device.rec_key
+			LEFT OUTER JOIN tbl_api_sls_book book ON bookOut.library_key = book.library_key AND bookOut.device_key = book.device_key AND bookOut.book_key = book.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND bookOut.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND bookOut.device_key = #{device_key}
+			</if>
+			<if test='id != "" and id != null'>
+				AND bookOut.id = #{id}
+			</if>
+			<if test='title != "" and title != null'>
+				AND book.title LIKE '%' || #{title} || '%'
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				AND bookOut.book_no = #{book_no}
+			</if>
+			<if test='bookout_status != "" and bookout_status != null'>
+				AND bookOut.status = #{bookout_status}
+			</if>
+			<if test='add_date != null'>
+				AND bookOut.add_date = #{add_date}::timestamp
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiSlibrary.insertSLSBookOutInfo -->
+	<insert id="insertSLSBookOutInfo" parameterType="map">
+		INSERT INTO tbl_api_sls_book_out (
+			library_key
+			,device_key
+			,book_key
+			,id
+			,rfid
+			,book_no
+			,add_date
+			,out_date
+			,cancel_date
+			,status
+		) VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{book_key}
+			,#{id}
+			,#{rfid}
+			,#{book_no}
+			,#{add_date}::timestamp
+			,#{out_date}::timestamp
+			,#{cancel_date}::timestamp
+			,#{status}
+		)
+	</insert>
+
+	<!-- [수정] apiSlibrary.updateSLSBookOutInfo -->
+	<update id="updateSLSBookOutInfo" parameterType="map">
+		UPDATE tbl_api_sls_book_out
+		   SET
+			id = #{id}
+			,rfid = #{rfid}
+			,book_no = #{book_no}
+			,add_date = #{add_date}
+			,out_date = #{out_date}
+			,cancel_date = #{cancel_date}
+			,status = #{status}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [삭제] apiSlibrary.deleteSLSBookOutInfo -->
+	<delete id="deleteSLSBookOutInfo" parameterType="map">
+		DELETE FROM tbl_api_sls_book_out
+		<where>
+			id = #{id}
+			AND rec_key = #{rec_key}
+		</where>
+	</delete>
+</mapper>

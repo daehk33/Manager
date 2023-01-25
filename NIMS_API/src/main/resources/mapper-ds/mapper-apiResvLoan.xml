@@ -1,0 +1,720 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 예약대출기 연계 데이터 CRUD -->
+<mapper namespace="apiResvLoan">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] apiResvLoan.getResvLoanUseLogInfo -->
+	<select id="getResvLoanUseLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_resvLoan_use_log
+		<where>
+		<if test='library_key != null'>
+			AND library_key	= #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key	= #{device_key}
+		</if>
+		<if test='idx != null'>
+			AND idx	= #{idx}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiResvLoan.insertResvLoanUseLogInfo -->
+	<insert id="insertResvLoanUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_use_log(
+			library_key
+			,device_key
+			,idx
+			,cabinet
+			,module
+			,sub_cabinet
+			,insert_no
+			,user_id
+			,user_name
+			,book_no
+			,title
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,isbn
+			,insert_date
+			,reservation_date
+			,out_date
+			,loan_date
+			,reservation_expire_date
+			,status
+		)
+	    VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{idx}
+			,#{cabinet}
+			,#{module}
+			,#{sub_cabinet}
+			,#{insert_no}
+			,#{user_id}
+			,#{user_name}
+			,#{book_no}
+			,#{title}
+			,#{author}
+			,#{publisher}
+			,#{vol_code}
+			,#{call_no}
+			,#{location_no}
+			,#{location_name}
+			,#{isbn}
+			,CASE WHEN #{insert_date} = '' THEN NULL ELSE #{insert_date}::timestamp END
+			,CASE WHEN #{reservation_date} = '' THEN NULL ELSE #{reservation_date}::timestamp END
+			,CASE WHEN #{out_date} = '' THEN NULL ELSE #{out_date}::timestamp END
+			,CASE WHEN #{loan_date} = '' THEN NULL ELSE #{loan_date}::timestamp END
+			,CASE WHEN #{reservation_expire_date} = '' THEN NULL ELSE #{reservation_expire_date}::timestamp END
+			,#{status}
+		)
+	</insert>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanUseLogInfo -->
+	<update id="updateResvLoanUseLogInfo" parameterType="map">
+		UPDATE tbl_api_resvLoan_use_log
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,idx = #{idx}
+			,cabinet = #{cabinet}
+			,module = #{module}
+			,sub_cabinet = #{sub_cabinet}
+			,insert_no = #{insert_no}
+			,user_id = #{user_id}
+			,user_name = #{user_name}
+			,book_no = #{book_no}
+			,title = #{title}
+			,author = #{author}
+			,publisher = #{publisher}
+			,vol_code = #{vol_code}
+			,call_no = #{call_no}
+			,location_no = #{location_no}
+			,location_name = #{location_name}
+			,isbn = #{isbn}
+			,insert_date = CASE WHEN #{insert_date} = '' THEN NULL ELSE #{insert_date}::timestamp END
+			,reservation_date = CASE WHEN #{reservation_date} = '' THEN NULL ELSE #{reservation_date}::timestamp END
+			,out_date = CASE WHEN #{out_date} = '' THEN NULL ELSE #{out_date}::timestamp END
+			,loan_date = CASE WHEN #{loan_date} = '' THEN NULL ELSE #{loan_date}::timestamp END
+			,reservation_expire_date = CASE WHEN #{reservation_expire_date} = '' THEN NULL ELSE #{reservation_expire_date}::timestamp END
+			,status = #{status}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<select id="getReservedBookStatus" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM tbl_api_resvloan_cabinet_module T1
+		LEFT JOIN tbl_api_resvloan_cabinet T2
+			ON T1.library_key = T2.library_key
+			AND T1.device_key = T2.device_key
+			AND T1.cabinet = T2.cabinet
+		WHERE
+			user_id = #{user_id}
+			AND book_no = #{book_no}
+	</select>
+	
+	<!-- [조회] apiResvLoan.getResvLoanCabinetModuleInfo -->
+	<select id="getResvLoanCabinetModuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,device_key
+			,cabinet
+			,insert_no
+			,status
+			,send_req_yn
+		FROM tbl_api_resvLoan_cabinet_module
+		<where>
+			<if test='library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+			<if test='insert_no != null'>
+				AND insert_no = #{insert_no}
+			</if>
+			<if test='send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+			
+		</where>
+	</select>
+	
+	<!-- [등록] apiResvLoan.insertResvLoanCabinetModuleInfo -->
+	<insert id="insertResvLoanCabinetModuleInfo" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_cabinet_module(
+			library_key
+			,device_key
+			,cabinet
+			,insert_no
+			,title
+			,book_rfid
+			,isbn
+			,book_no
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,reservation_date
+			,reservation_expire_date
+			,lib_code
+			,lib_name
+			,status
+			,send_req_yn
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{cabinet}
+			,#{insert_no}
+			,#{title}
+			,#{booK_rfid}
+			,#{isbn}
+			,#{book_no}
+			,#{author}
+			,#{publisher}
+			,#{vol_code}
+			,#{call_no}
+			,#{location_no}
+			,#{location_name}
+			,CASE WHEN #{reservation_date} = '' THEN NULL ELSE #{reservation_date}::timestamp END
+			,CASE WHEN #{reservation_expire_date} = '' THEN NULL ELSE #{reservation_expire_date}::timestamp END
+			,#{lib_code}
+			,#{lib_name}
+			,#{status}
+			,#{send_req_yn}
+		)
+	</insert>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanCabinetModuleInfo -->
+	<update id="updateResvLoanCabinetModuleInfo" parameterType="map">
+		UPDATE tbl_api_resvLoan_cabinet_module
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,cabinet = #{cabinet}
+			,insert_no = #{insert_no}
+			,title = #{title}
+			,book_rfid = #{book_rfid}
+			,isbn = #{isbn}
+			,book_no = #{book_no}
+			,author = #{author}
+			,publisher = #{publisher}
+			,vol_code = #{vol_code}
+			,call_no = #{call_no}
+			,location_no = #{location_no}
+			,location_name = #{location_name}
+			,reservation_date = CASE WHEN #{reservation_date} = '' THEN NULL ELSE #{reservation_date}::timestamp END
+			,reservation_expire_date = CASE WHEN #{reservation_expire_date} = '' THEN NULL ELSE #{reservation_expire_date}::timestamp END
+			,lib_code = #{lib_code}
+			,lib_name = #{lib_name}
+			,status = #{status}
+			,update_date = now()
+			,worker = #{worker}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [삭제] apiResvLoan.deleteResvLoanCabinetModuleInfo -->
+	<delete id="deleteResvLoanCabinetModuleInfo">
+		DELETE FROM tbl_api_resvLoan_cabinet_module
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='rec_key != "" and rec_key != null'>
+				AND rec_key = #{rec_key}
+			</if>
+			<if test='cabinet != "" and cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanCabinetModuleSendResult -->
+	<update id="updateResvLoanCabinetModuleSendResult" parameterType="map">
+		UPDATE tbl_api_resvLoan_cabinet_module
+		   SET
+			send_req_yn = #{send_req_yn}
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+				AND cabinet = #{cabinet}
+		</where>
+	</update>
+	
+	<!-- [조회] apiResvLoan.getResvLoanCabinetInfo -->
+	<select id="getResvLoanCabinetInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,cabinet
+			,module
+			,sub_cabinet
+			,book_count
+			,status
+			,error
+			,cabinet_type
+			,send_req_yn
+		FROM tbl_api_resvLoan_cabinet
+		<where>
+			<if test='library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+			<if test='module != null'>
+				AND module = #{module}
+			</if>
+			<if test='sub_cabinet != null'>
+				AND sub_cabinet = #{sub_cabinet}
+			</if>
+			<if test='send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiResvLoan.insertResvLoanCabinetInfo -->
+	<insert id="insertResvLoanCabinetInfo" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_cabinet(
+			library_key
+			,device_key
+			,cabinet
+			,module
+			,sub_cabinet
+			,insert_date
+			,user_id
+			,user_name
+			,book_count
+			,status
+			,error
+			,cabinet_type
+			,send_req_yn
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{cabinet}
+			,#{module}
+			,#{sub_cabinet}
+			,CASE WHEN #{insert_date} = '' THEN NULL ELSE #{insert_date}::timestamp END 
+			,#{user_id}
+			,#{user_name}
+			,#{book_count}
+			,#{status}
+			,#{error}
+			,#{cabinet_type}
+			,#{send_req_yn}
+		)
+	</insert>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanCabinetInfo -->
+	<update id="updateResvLoanCabinetInfo" parameterType="map">
+		UPDATE tbl_api_resvLoan_cabinet
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,cabinet = #{cabinet}
+			,module = #{module}
+			,sub_cabinet = #{sub_cabinet}
+			,insert_date = CASE WHEN #{insert_date} = '' THEN NULL ELSE #{insert_date}::timestamp END
+			,user_id = #{user_id}
+			,user_name = #{user_name}
+			,book_count = #{book_count}
+			,status = #{status}
+			,error = #{error}
+			,cabinet_type = #{cabinet_type}
+			,update_date = now()
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanCabinetType -->
+	<update id="updateResvLoanCabinetType" parameterType="map">
+		UPDATE tbl_api_resvLoan_cabinet
+		   SET
+			cabinet_type = CASE WHEN (sub_cabinet <![CDATA[<=]]> 5 AND cabinet_type != 1 OR cabinet_type IS NULL) THEN 1
+								WHEN (sub_cabinet <![CDATA[<=]]> 5 AND cabinet_type != 0) THEN 0
+								WHEN sub_cabinet <![CDATA[>]]> 5 THEN 0 END
+			,status = CASE WHEN (sub_cabinet <![CDATA[<=]]> 5 AND status::integer = 1) THEN 1
+						  WHEN (sub_cabinet <![CDATA[>]]> 5 AND status::integer != 2) THEN 2
+						  ELSE 0 END
+			,update_date = now()
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		<where>
+			rec_key = #{rec_key}
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</update>
+	
+	<!-- [삭제] apiResvLoan.deleteResvLoanCabinetInfo -->
+	<delete id="deleteResvLoanCabinetInfo" parameterType="map">
+		DELETE FROM tbl_api_resvLoan_cabinet
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='rec_key != "" and rec_key != null'>
+				AND rec_key = #{rec_key}
+			</if>
+			<if test='module != "" and module != null'>
+				AND module = #{module}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanCabinetSendResult -->
+	<update id="updateResvLoanCabinetSendResult" parameterType="map">
+		UPDATE tbl_api_resvLoan_cabinet
+		   SET
+			send_req_yn = #{send_req_yn}
+		<where>
+				cabinet = #{cabinet}
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</update>
+	
+	<!-- [조회] apiResvLoan.getResvLoanUnmodifiableCabinetList -->
+	<select id="getResvLoanUnmodifiableCabinetList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,device_key
+			,cabinet
+			,module
+			,sub_cabinet
+		FROM
+			tbl_api_resvloan_cabinet
+		<where>
+			sub_cabinet NOT IN (3, 4, 5)
+			<if test='library_key != "" and library_key != null'>
+				 AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			OR module = 2
+		</where>
+		ORDER BY library_key, device_key, module, cabinet, sub_cabinet
+	</select>
+	
+	<!-- [조회] apiResvLoan.getResvLoanModuleInfoList -->
+	<select id="getResvLoanModuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) AS library_nm
+			,device_key
+			,fn_device_nm(device_key) AS device_nm
+			,module_id
+			,cabinet_no
+			,direction
+			,CASE WHEN direction = 0 THEN '중앙' WHEN direction = 1 THEN '좌측' WHEN direction = 2 THEN '우측' END AS direction_nm
+			,column_cnt
+			,row_cnt
+			,start_left
+			,start_top
+			,width
+			,height
+			,out_type
+			,send_req_yn
+		FROM tbl_api_resvLoan_module
+		<where>
+			<if test='library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='direction != null'>
+				AND direction = #{direction}
+			</if>
+			<if test='module_id != null'>
+				AND module_id = #{module_id}
+			</if>
+			<if test='cabinet_no != null'>
+				AND cabinet_no = #{cabinet_no}
+			</if>
+			<if test='send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+		ORDER BY library_key, device_key, module_id
+	</select>
+	
+	<!-- [조회] apiResvLoan.getResvLoanModuleInfo -->
+	<select id="getResvLoanModuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_resvLoan_module
+		<where>
+			<if test='library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='module_id != null'>
+				AND module_id = #{module_id}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiResvLoan.insertResvLoanModuleInfo -->
+	<insert id="insertResvLoanModuleInfo" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_module(
+			library_key
+			,device_key
+			,module_id
+			,cabinet_no
+			,direction
+			,column_cnt
+			,row_cnt
+			,start_left
+			,start_top
+			,width
+			,height
+			,out_type
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{module_id}
+			,#{cabinet_no}
+			,#{direction}
+			,#{column_cnt}
+			,#{row_cnt}
+			,#{start_left}
+			,#{start_top}
+			,#{width}
+			,#{height}
+			,#{out_type}
+		)
+	</insert>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanModuleInfo -->
+	<update id="updateResvLoanModuleInfo" parameterType="map">
+		UPDATE tbl_api_resvLoan_module
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,module_id = #{module_id}
+			,cabinet_no = #{cabinet_no}
+			,direction = #{direction}
+			,column_cnt = #{column_cnt}
+			,row_cnt = #{row_cnt}
+			,start_left = #{start_left}
+			,start_top = #{start_top}
+			,width = #{width}
+			,height = #{height}
+			,out_type = #{out_type}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [등록] apiResvLoan.insertRevLoanModule -->
+	<insert id="insertResvLoanModule" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_module(
+			library_key
+			,device_key
+			,module_id
+			,cabinet_no
+			,direction
+			,column_cnt
+			,row_cnt
+			,start_left
+			,start_top
+			,width
+			,height
+			,out_type
+			,send_req_yn
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{module_id}
+			,(SELECT MAX(cabinet_no) FROM tbl_api_resvLoan_module) + 10
+			,#{direction}
+			,2
+			,5
+			,(SELECT MAX(start_left) FROM tbL_api_resvLoan_module WHERE direction = #{direction}) + 261
+			,96
+			,92
+			,121
+			,0
+			,'Y'
+		)
+	</insert>
+	
+	<!-- [삭제] apiResvLoan.deleteResvLoanModule -->
+	<delete id="deleteResvLoanModule" parameterType="map">
+		DELETE FROM tbl_api_resvLoan_module
+		<where>
+			module_id = #{module_id}
+			AND module_id = (SELECT MAX(module_id) FROM tbl_api_resvLoan_module WHERE library_key = #{library_key} AND device_key = #{device_key})
+			AND module_id NOT IN (1, 2, 3)
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanModuleSendResult -->
+	<update id="updateResvLoanModuleSendResult" parameterType="map">
+		UPDATE tbl_api_resvLoan_module
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiResvLoan.getResvLoanRuleList -->
+	<select id="getResvLoanRuleList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,fn_library_nm(library_key) as library_nm
+			,library_key
+			,fn_device_nm(device_key) as device_nm
+			,device_key
+			,manage_id
+			,group_1
+			,use
+			,value_1
+			,description
+			,show
+		FROM
+			tbl_api_resvLoan_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='description != "" and description != null'>
+				AND description LIKE '%' || #{description} || '%'
+			</if>
+			<if test='group_1 != "" and group_1 != null'>
+				AND group_1 LIKE '%' || #{group_1} || '%'
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+		ORDER BY manage_id::integer
+	</select>
+	
+	<!-- [조회] apiResvLoan.getResvLoanRuleInfo -->
+	<select id="getResvLoanRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM
+			tbl_api_resvLoan_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='manage_id != "" and manage_id != null'>
+				AND manage_id = #{manage_id}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiResvLoan.insertResvLoanRuleInfo -->
+	<insert id="insertResvLoanRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_resvLoan_rule(
+			library_key
+			,device_key
+			,manage_id
+			,group_1
+			,use
+			,value_1
+			,description
+			,show
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{manage_id}
+			,#{group_1}
+			,#{use}
+			,#{value_1}
+			,#{description}
+			,#{show}
+		)
+	</insert>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanRuleInfo -->
+	<update id="updateResvLoanRuleInfo" parameterType="map">
+		UPDATE tbl_api_resvLoan_rule
+		   SET
+			use = #{use}
+			,value_1 = #{value_1}
+			,update_date = now()
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] apiResvLoan.updateResvLoanRuleSendResult -->
+	<update id="updateResvLoanRuleSendResult" parameterType="map">
+		UPDATE tbl_api_resvLoan_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+</mapper>

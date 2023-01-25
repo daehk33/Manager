@@ -1,0 +1,1173 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 출입게이트 연계 데이터 CRUD -->
+<mapper namespace="apiGate">
+	<resultMap id="map" type="java.util.HashMap" />
+
+	<cache />
+	<!-- [조회] apiGate.getGateLatestLogDate -->
+	<select id="getGateLatestLogDate" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			MAX(LOG_TIME) as latest_date
+		FROM
+			tbl_api_gate_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+
+	<!-- [조회] apiGate.getGateUseLogInfo -->
+	<select id="getGateUseLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_gate_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			<if test='log_time != null'>
+				AND log_time = #{log_time}
+			</if>
+			<if test='log_type != "" and log_type != null'>
+				AND log_type = #{log_type}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateUseLogInfo -->
+	<insert id="insertGateUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_use_log(
+			library_key
+			,device_id
+			,user_id
+			,company_code
+			,dept_code
+			,major_code
+			,user_position
+			,log_time
+			,log_type
+			,io_type
+			,input_type
+		)
+		VALUES (
+			#{library_key}
+			,#{device_id}
+			,#{user_id}
+			,#{company_code}
+			,#{dept_code}
+			,#{major_code}
+			,#{user_position}
+			,#{log_time}
+			,#{log_type}
+			,#{io_type}
+			,#{input_type}
+		)
+	</insert>
+
+	<!-- [등록] apiGate.insertBatchGateUseLogInfo -->
+	<insert id="insertBatchGateUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_use_log(
+			library_key
+			,device_id
+			,user_id
+			,company_code
+			,dept_code
+			,major_code
+			,user_position
+			,log_time
+			,log_type
+			,io_type
+			,input_type
+		)
+		VALUES
+		<foreach collection="infoList" index="index" item="item" separator=",">
+		(
+			#{library_key}
+			,#{item.device_id}
+			,#{item.user_id}
+			,#{item.company_code}
+			,#{item.dept_code}
+			,#{item.major_code}
+			,#{item.user_position}
+			,#{item.log_time}
+			,#{item.log_type}
+			,#{item.io_type}
+			,#{item.input_type}
+		)
+		</foreach>
+	</insert>
+
+	<!-- [수정] apiGate.updateGateUseLogInfo -->
+	<update id="updateGateUseLogInfo" parameterType="map">
+		UPDATE tbl_api_gate_use_log
+		   SET
+			library_key = #{library_key}
+			,device_id = #{item.device_id}
+			,user_id = #{user_id}
+			,company_code = #{company_code}
+			,dept_code = #{dept_code}
+			,major_code = #{major_code}
+			,user_position = #{user_position}
+			,log_time = #{log_time}::timestamp
+			,log_type = #{log_type}
+			,io_type = #{io_type}
+			,input_type = #{input_type}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGateUserInfo -->
+	<select id="getGateUserInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_member
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id = #{user_id}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateUserInfo -->
+	<insert id="insertGateUserInfo" parameterType="map">
+		INSERT INTO tbl_api_member(
+			library_key
+			,user_id
+			,user_nm
+			,user_sex
+			,company_code
+			,dept_code
+			,major_code
+			,user_position
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{user_id}
+			,#{user_name}
+			,#{user_sex}
+			,#{company_code}
+			,#{dept_code}
+			,#{major_code}
+			,#{user_position}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateUserInfo -->
+	<update id="updateGateUserInfo" parameterType="map">
+		UPDATE tbl_api_member
+		   SET
+			library_key = #{library_key}
+			,user_id = #{user_id}
+			,user_nm = #{user_name}
+			,user_sex = #{user_sex}
+			,company_code = #{company_code}
+			,dept_code = #{dept_code}
+			,major_code = #{major_code}
+			,user_position = #{user_position}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGateCompanyCodeInfo -->
+	<select id="getGateCompanyCodeInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_gate_company_code
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='company_code != "" and company_code != null'>
+				AND company_code = #{company_code}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateCompanyCodeInfo -->
+	<insert id="insertGateCompanyCodeInfo" parameterType = "map">
+		INSERT INTO tbl_api_gate_company_code(
+			library_key
+			,company_code
+			,company_nm
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{company_code}
+			,#{company_name}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateCompanyCodeInfo -->
+	<update id="updateGateCompanyCodeInfo" parameterType="map">
+		UPDATE tbl_api_gate_company_code
+		   SET
+			library_key = #{library_key}
+			,company_code = #{company_code}
+			,company_nm = #{company_name}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGateDeptCodeInfo -->
+	<select id="getGateDeptCodeInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_gate_dept_code
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='dept_code != "" and dept_code != null'>
+				AND dept_code = #{dept_code}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateDeptCodeInfo -->
+	<insert id="insertGateDeptCodeInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_dept_code(
+			library_key
+			,dept_code
+			,dept_nm
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{dept_code}
+			,#{dept_name}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateDeptCodeInfo -->
+	<update id="updateGateDeptCodeInfo" parameterType="map">
+		UPDATE tbl_api_gate_dept_code
+		   SET
+			library_key = #{library_key}
+			,dept_code = #{dept_code}
+			,dept_nm = #{dept_name}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGateMajorCodeInfo -->
+	<select id="getGateMajorCodeInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_gate_major_code
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='major_code != "" and major_code != null'>
+				AND major_code = #{major_code}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateMajorCodeInfo -->
+	<insert id="insertGateMajorCodeInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_major_code(
+			library_key
+			,major_code
+			,major_nm
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{major_code}
+			,#{major_name}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateMajorCodeInfo -->
+	<update id="updateGateMajorCodeInfo" parameterType="map">
+		UPDATE tbl_api_gate_major_code
+		   SET
+			library_key = #{library_key}
+			,major_code = #{major_code}
+			,major_nm = #{major_name}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGatePositionCodeInfo -->
+	<select id="getGatePositionCodeInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_gate_position_code
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='user_position != "" and user_position != null'>
+				AND position_code = #{user_position}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGatePositionCodeInfo -->
+	<insert id="insertGatePositionCodeInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_position_code(
+			library_key
+			,position_code
+			,position_nm
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{user_position}
+			,#{posi_name}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGatePositionCodeInfo -->
+	<update id="updateGatePositionCodeInfo" parameterType="map">
+		UPDATE tbl_api_gate_position_code
+		   SET
+			library_key = #{library_key}
+			,position_code = #{user_position}
+			,position_nm = #{posi_name}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [조회] apiGate.getGateRuleInfoList -->
+	<select id="getGateRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) as library_nm
+			,rule_id
+			,rule_name
+			,description
+			,option01
+			,option02
+			,option03
+			,option04
+			,enable
+		FROM
+			tbl_api_gate_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='rule_id != "" and rule_id != null'>
+				AND rule_id = #{rule_id}
+			</if>
+			<if test='rule_name != "" and rule_name != null'>
+				AND rule_name = #{rule_name}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+		ORDER BY rec_key
+	</select>
+
+	<!-- [조회] apiGate.getGateRuleInfo -->
+	<select id="getGateRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM
+			tbl_api_gate_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='rule_id != "" and rule_id != null'>
+				AND rule_id = #{rule_id}
+			</if>
+		</where>
+	</select>
+
+	<!-- [등록] apiGate.insertGateRuleInfo -->
+	<insert id="insertGateRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_rule(
+			library_key
+			,rule_id
+			,rule_name
+			,description
+			,option01
+			,option02
+			,option03
+			,option04
+			,enable
+			,update_date
+			,worker
+		)
+		VALUES (
+			#{library_key}
+			,#{rule_id}
+			,#{rule_name}
+			,#{description}
+			,#{option01}
+			,#{option02}
+			,#{option03}
+			,#{option04}
+			,#{enable}
+			,now()
+			,#{worker}
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateRuleInfo -->
+	<update id="updateGateRuleInfo" parameterType="map">
+		UPDATE tbl_api_gate_rule
+		   SET
+			option01 = #{option01}
+			,option02 = #{option02}
+			,option03 = #{option03}
+			,option04 = #{option04}
+			,update_date = now()::date
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [수정] apiGate.updateGateRuleSendResult -->
+	<update id="updateGateRuleSendResult" parameterType="map">
+		UPDATE tbl_api_gate_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiGate.getInputList -->
+	<select id="getInputList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			input.library_key
+			,input.type
+			,input.port
+			,input.baudrate
+			,input.databit
+			,input.stopbit
+			,input.paritybit
+			,library.library_nm
+		FROM
+			tbl_api_gate_input input
+			INNER JOIN tbl_library library ON library.rec_key = input.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND input.library_key = #{library_key}
+			</if>
+			<if test='type != "" and type != null'>
+				AND input.type = #{type}
+			</if>
+			<if test='port != "" and port != null'>
+				AND input.port = #{port}
+			</if>
+		</where>
+		ORDER BY library_key, type, port
+	</select>
+	
+	<!-- [등록] gate.insertInputInfo -->
+	<insert id="insertInputInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_input(
+			library_key
+			,port
+			,type
+			,baudrate
+			,databit
+			,stopbit
+			,paritybit
+		)
+		VALUES (
+			#{library_key}
+			,#{port}
+			,#{type}
+			,#{baudrate}
+			,#{databit}
+			,#{stopbit}
+			,#{paritybit}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateInputInfo  -->
+	<update id="updateInputInfo" parameterType="map">
+		UPDATE tbl_api_gate_input
+		   SET
+			library_key = #{library_key}
+			,type	= #{type}
+			,port	= #{port}
+			,baudrate	= #{baudrate}
+			,databit	= #{databit}
+			,stopbit	= #{stopbit}
+			,paritybit	= #{paritybit}
+		WHERE
+			library_key = #{library_key}
+			AND port = #{port}
+	</update>
+	
+	<!-- [삭제] apiGate.deleteInputInfo -->
+	<delete id="deleteInputInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_input
+		WHERE 
+			library_key = #{library_key}
+			AND port = #{port}
+	</delete>
+	
+	<!-- [조회] apiGate.getGateList -->
+	<select id="getGateList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			list.rec_key
+			,list.library_key
+			,library.library_nm
+			,list.description
+			,list.ip
+			,list.location
+		FROM
+			tbl_api_gate_list list
+			INNER JOIN tbl_library library ON library.rec_key = list.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] gate.getGateInfoList -->
+	<select id="getGateInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			list.rec_key as gate_key
+			,list.library_key
+			,list.controller_port
+			,library.library_nm
+			,list.description
+			,list.location
+			,list.ip
+		FROM
+			tbl_api_gate_list list
+			INNER JOIN tbl_library library ON library.rec_key = list.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				library.rec_key = #{library_key}
+			</if>
+			<if test='controller_port != "" and controller_port != null'>
+				AND list.controller_port LIKE '%'||#{controller_port}||'%'
+			</if>
+			<if test='location != "" and location != null'>
+				AND list.location LIKE '%'||#{location}||'%'
+			</if>
+			<if test='description != "" and description != null'>
+				AND list.description LIKE '%'||#{description}||'%'
+			</if>
+		</where>
+		ORDER BY list.library_key, list.rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] gate.insertGateInfo -->
+	<insert id="insertGateInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_list(
+			library_key
+			,controller_port
+			,description
+			,location
+			,ip
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{controller_port}
+			,#{description}
+			,#{location}
+			,#{gate_ip}
+			,now()
+		)
+	</insert>
+	
+	<!-- [수정] gate.updateGateInfo -->
+	<update id="updateGateInfo" parameterType="map">
+		UPDATE tbl_api_gate_list
+		   SET
+			library_key = #{library_key}
+			,description = #{description}
+			,controller_port = #{controller_port}
+			,location = #{location}
+			,ip = #{gate_ip}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [삭제]gate.deleteGateInfo -->
+	<delete id="deleteGateInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_list
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [조회] gate.getGroupList -->
+	<select id="getGroupList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			g.rec_key
+			,g.library_key
+			,g.device_port
+			,g.gate
+			,g.command
+			,g.direction
+			,g.description
+			,com.type
+			,library.library_nm
+		FROM
+			tbl_api_gate_group g
+			INNER JOIN tbl_api_gate_command com on com.rec_key = g.rec_key
+			INNER JOIN tbl_library library on library.rec_key = g.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND g.library_key = #{library_key}
+			</if>
+		</where>
+		ORDER BY g.rec_key, g.library_key
+	</select>
+	
+	<!-- [등록] gate.insertGroupInfo -->
+	<insert id="insertGroupInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_group(
+			device_port
+			,gate
+			,command
+			,direction
+			,library_key
+		)
+		VALUES (
+			#{device_port}
+			,#{gate}
+			,#{command}
+			,#{direction}
+			,#{library_key}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateGroupInfo  -->
+	<update id="updateGroupInfo" parameterType="map">
+		UPDATE tbl_api_gate_group
+		SET
+			library_key = #{library_key}
+			,device_port = #{device_port}
+			,gate = #{gate}
+			,command = #{command}
+			,direction = #{direction}
+		WHERE rec_key = #{rec_key}
+	</update>	
+	
+	<!-- [삭제]gate.deleteGroupInfo -->
+	<delete id="deleteGroupInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_group
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [조회] apiGate."getGateDBConnInfo" -->
+	<select id="getGateDBConnInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			library_key
+			,type
+			,server_ip
+			,port
+			,data_source
+			,user_id
+			,pwd
+			,gate_ip
+			,gate_port
+			,gate_data_source
+			,gate_user_id
+			,gate_pwd
+			,smart_ip
+			,smart_port
+			,smart_data_source
+			,smart_user_id
+			,smart_pwd
+			,use_smart
+			,position
+			,manage_code
+		FROM
+			tbl_api_gate_dbconn	
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apigate.insertGateDBConn  -->
+	<insert id="insertGateDBConn" parameterType="map">
+		INSERT INTO tbl_api_gate_dbconn (	
+			library_key
+			,type
+			,server_ip
+			,port
+			,data_source
+			,user_id
+			,pwd
+			,gate_ip
+			,gate_port
+			,gate_data_source
+			,gate_user_id
+			,gate_pwd
+			,smart_ip
+			,smart_port
+			,smart_data_source
+			,smart_user_id
+			,smart_pwd
+			,use_smart
+			,position
+			,manage_code
+		)			
+		VALUES (
+			#{library_key}
+			,#{type}
+			,#{server_ip}
+			,#{port}
+			,#{data_source}
+			,#{user_id}
+			,#{pwd}
+			,#{gate_ip}
+			,#{gate_port}
+			,#{gate_data_source}
+			,#{gate_user_id}
+			,#{gate_pwd}
+			,#{smart_ip}
+			,#{smart_port}
+			,#{smart_data_source}
+			,#{smart_user_id}
+			,#{smart_pwd}
+			,#{use_smart}
+			,#{position}
+			,#{manage_code}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateGateDBConn  -->
+	<update id="updateGateDBConn" parameterType="map">
+		UPDATE tbl_api_gate_dbconn
+		   SET
+			library_key = #{library_key}
+			,type = #{type}
+			,server_ip = #{server_ip}
+			,port = #{port}
+			,data_source = #{data_source}
+			,user_id = #{user_id}
+			,pwd = #{pwd}
+			,gate_ip = #{gate_ip}
+			,gate_port = #{gate_port}
+			,gate_data_source = #{gate_data_source}
+			,gate_user_id = #{gate_user_id}
+			,gate_pwd = #{gate_pwd}
+			,smart_ip = #{smart_ip}
+			,smart_port = #{smart_port}
+			,smart_data_source = #{smart_data_source}
+			,smart_user_id = #{smart_user_id}
+			,smart_pwd = #{smart_pwd}
+			,use_smart = #{use_smart}
+			,position = #{position}
+			,manage_code = #{manage_code}
+		WHERE library_key = #{library_key}
+	</update>
+	
+	<!-- [조회] apiGate.getGateScheduleList -->
+	<select id="getGateScheduleList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			schedule.rec_key
+			,library.library_nm
+			,schedule.library_key
+			,schedule.equip_key
+			,equip.equip_id
+			,equip.equip_ip
+			,schedule.operation_type
+			,schedule.operation_type_nm
+			,schedule.time
+			,schedule.date
+			,schedule.use_yn
+			,TO_CHAR(schedule.create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM
+			tbl_library library
+			INNER JOIN tbl_api_gate_equipment equip ON library.rec_key = equip.library_key
+			INNER JOIN tbl_api_gate_schedule schedule ON library.rec_key = schedule.library_key AND equip.rec_key = schedule.equip_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND schedule.library_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND equip.device_id = #{device_id}
+			</if>
+			<if test='use_yn != "" and use_yn != null'>
+				AND schedule.use_yn = #{use_yn}
+			</if>
+		</where>
+		ORDER BY equip_key, case when date = 'ALL' then -1 end, date, time
+	</select>
+
+	<!-- [등록] apiGate.insertGateScheduleInfo -->
+	<insert id="insertGateScheduleInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_schedule(
+			library_key
+			,equip_key
+			,operation_type
+			,operation_type_nm
+			,time
+			,date
+			,use_yn
+			,create_user
+			,create_date
+		)
+		VALUES (
+			#{library_key}
+			,#{equip_key}
+			,#{operation_type}
+			,#{operation_type_nm}
+			,#{time}
+			,#{date}
+			,#{use_yn}
+			,#{worker}
+			,now()
+		)
+	</insert>
+
+	<!-- [수정] apiGate.updateGateScheduleInfo -->
+	<update id="updateGateScheduleInfo" parameterType="map">
+		UPDATE tbl_api_gate_schedule
+		   SET
+			operation_type = #{operation_type}
+			,operation_type_nm = #{operation_type_nm}
+			,time = #{time}
+			,date = #{date}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+
+	<!-- [삭제] apiGate.deleteGateScheduleInfo -->
+	<delete id="deleteGateScheduleInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_schedule
+		WHERE
+			rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [조회] apiGate.getSecurityList -->
+	<select id="getSecurityList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			bio.rec_key
+			,library.library_nm
+			,bio.library_key
+			,bio.group_no
+			,bio.device_sn
+			,bio.api_url
+			,bio.access_token
+		FROM
+			tbl_library library
+			INNER JOIN tbl_api_gate_bio_security bio ON library.rec_key = bio.library_key 
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND bio.library_key = #{library_key}
+			</if>
+			<if test='rec_key != "" and rec_key != null'>
+				AND bio.rec_key = #{rec_key}
+			</if>
+		</where>
+		ORDER BY bio.library_key, bio.rec_key
+	</select>
+	
+	<!-- [등록] apiGate.insertSecurityInfo -->
+	<insert id="insertSecurityInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_bio_security(
+			library_key
+			,group_no
+			,device_sn
+			,access_token
+			,api_url
+		)
+		VALUES (
+			#{library_key}
+			,#{group_no}
+			,#{device_sn}
+			,#{access_token}
+			,#{api_url}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateSecurityInfo -->
+	<update id="updateSecurityInfo" parameterType="map">
+		UPDATE tbl_api_gate_bio_security
+		   SET
+			group_no = #{group_no}
+			,device_sn = #{device_sn}
+			,access_token = #{access_token}
+			,api_url = #{api_url}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [삭제] apiGate.deleteSecurityInfo -->
+	<delete id="deleteSecurityInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_bio_security
+		WHERE
+			rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [등록] apiGate.insertCommandInfo -->
+	<insert id="insertCommandInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_command(
+			library_key
+			,gate
+			,type
+			,update_date
+			,update_user
+		)
+		VALUES (
+			#{library_key}
+			,#{gate}
+			,#{type}
+			,now()
+			,#{worker}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateCommandInfo  -->
+	<update id="updateCommandInfo" parameterType="map">
+		UPDATE tbl_api_gate_command
+		SET
+			library_key = #{library_key}
+			,gate = #{gate}
+			,type = #{type}
+			,update_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [삭제]gate.deleteCommandInfo -->
+	<delete id="deleteCommandInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_command
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [조회] apiGate."getCfgRuleInfo" -->
+	<select id="getCfgRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			cfg.library_key
+			,cfg.rule_name
+			,cfg.category
+			,cfg.rule_value
+			,library.library_nm
+ 		FROM
+ 			tbl_api_gate_cfg_rule cfg
+			INNER JOIN tbl_library library ON library.rec_key = cfg.library_key 
+		<where>
+			<if test='rec_key != "" and rec_key != null'>
+				AND cfg.rec_key = #{rec_key}
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				AND cfg.library_key = #{library_key}
+			</if>
+			<if test='category != "" and category != null'>
+				AND cfg.category = #{category}
+			</if>
+			<if test='rule_value != "" and rule_value != null'>
+				AND cfg.rule_value = #{rule_value}
+			</if>
+			<if test='rule_name != "" and rule_name != null'>
+				AND cfg.rule_name = #{rule_name}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apigate.insertCfgRuleInfo -->
+	<insert id="insertCfgRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_cfg_rule(
+			library_key
+			,category
+			,rule_name
+			,rule_value
+			,update_date
+			,update_user
+		)
+		VALUES (
+			#{library_key}
+			,#{category}
+			,#{rule_name}
+			,#{rule_value}
+			,now()
+			,#{worker}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateCfgRuleInfo -->
+	<update id="updateCfgRuleInfo" parameterType="map">
+		UPDATE tbl_api_gate_cfg_rule
+		   SET
+			library_key = #{library_key}
+			,rule_value = #{rule_value}
+			,rule_name = #{rule_name}
+			,category = #{category}
+			,update_date = now()
+			,update_user = #{worker}
+		WHERE
+			rule_name = #{rule_name}
+		AND
+			category = #{category}
+		AND
+			library_key = #{library_key}
+	</update>
+	
+	<!-- [조회] apiGate.checkPortDuplicated -->
+	<select id="checkPortDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM
+			tbl_api_gate_input
+		<where>
+			port = #{port}
+			AND library_key = #{library_key}
+		</where>
+	</select>
+	
+	<!-- [조회] apigate.getBtnList -->
+	<select id="getBtnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			btn.rec_key
+			,btn.gate
+			,btn.command
+			,btn.enable
+			,btn.library_key
+			,btn.btn_name
+			,btn.short_cut
+			,btn.open
+			,btn.close
+			,btn."on"
+			,btn.off
+			,btn.reset
+			,btn.forced_close
+			,btn.io_type
+			,library.library_nm
+		FROM
+			tbl_api_gate_btn btn
+			INNER JOIN tbl_library library on library.rec_key = btn.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND btn.library_key = #{library_key}
+			</if>
+			<if test='gate != "" and gate != null'>
+				AND btn.gate = #{gate}
+			</if>
+			<if test='command != "" and command != null'>
+				AND btn.command = #{command}
+			</if>
+		</where>
+		ORDER BY btn.library_key, btn.rec_key
+	</select>
+	
+	<!-- [등록] apigate.insertBtnInfo -->
+	<insert id="insertBtnInfo" parameterType="map">
+		INSERT INTO tbl_api_gate_btn(
+			library_key
+			,btn_name
+			,gate
+			,command
+			,enable
+			,short_cut
+			,open
+			,close
+			,"on"
+			,off
+			,reset
+			,forced_close
+			,io_type
+		)
+		VALUES (
+			#{library_key}
+			,#{btn_name}
+			,#{gate}
+			,#{command}
+			,#{enable}
+			,#{short_cut}
+			,#{open}
+			,#{close}
+			,#{on}
+			,#{off}
+			,#{reset}
+			,#{forced_close}
+			,#{io_type}
+		)
+	</insert>
+	
+	<!-- [수정] apiGate.updateBtnInfo -->
+	<update id="updateBtnInfo" parameterType="map">
+		UPDATE tbl_api_gate_btn
+		   SET
+			library_key = #{library_key}
+			,btn_name = #{btn_name}
+			,gate = #{gate}
+			,command = #{command}
+			,enable = #{enable}
+			,short_cut = #{short_cut}
+			,open = #{open}
+			,close = #{close}
+			,"on" = #{on}
+			,off = #{off}
+			,reset = #{reset}
+			,forced_close = #{forced_close}
+			,io_type = #{io_type}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [삭제] apiGate.deleteBtnInfo -->
+	<delete id="deleteBtnInfo" parameterType="map">
+		DELETE FROM tbl_api_gate_btn
+		WHERE
+			rec_key = #{rec_key}
+	</delete>
+</mapper>

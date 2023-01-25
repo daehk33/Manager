@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="library">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+		<!-- [조회] library.getLibraryCount  -->
+	<select id="checkLibraryDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_library
+		WHERE 
+			library_id = #{library_id}
+	</select>
+	
+	<!-- [조회] library.getLibraryCount  -->
+	<select id="getLibraryCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_library
+		<where>
+		<if test='rec_key != "" and rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_id != "" and library_id != null'>
+			AND library_id LIKE '%'||#{library_id}||'%'
+		</if>
+		<if test='library_nm != "" and library_nm != null'>
+			AND library_nm LIKE '%'||#{library_nm}||'%'
+		</if>
+		<if test='location != "" and location != null'>
+			AND location LIKE '%'||#{location}||'%'
+		</if>
+		</where>
+	</select>
+	<!-- [조회] library.getLibraryList  -->
+	<select id="getLibraryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,library_id
+			,library_nm
+			,location
+			,library_desc
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_library
+		<where>
+		<if test='rec_key != "" and rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_id != "" and library_id != null'>
+			AND library_id LIKE '%'||#{library_id}||'%'
+		</if>
+		<if test='library_nm != "" and library_nm != null'>
+			AND library_nm LIKE '%'||#{library_nm}||'%'
+		</if>
+		<if test='location != "" and location != null'>
+			AND location LIKE '%'||#{location}||'%'
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	<!-- [조회] library.getLibraryDBConnList  -->
+	<select id="getLibraryDBConnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key as library_key
+			,library_id
+			,db_classname
+			,db_url
+			,db_username
+			,db_password
+		FROM
+			tbl_library
+		WHERE db_useyn = 'Y'
+	</select>
+	
+	<!-- [등록] library.insertLibraryInfo  -->
+	<insert id="insertLibraryInfo" parameterType="map">
+		INSERT INTO tbl_library(
+			library_id
+			,library_nm
+			,location
+			,library_desc
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_id}
+			,#{library_nm}
+			,#{location}
+			,#{library_desc}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	
+	</insert>
+	<!-- [삭제] library.deleteLibraryInfo  -->
+	<delete id="deleteLibraryInfo" parameterType="map">
+		DELETE FROM tbl_library
+		WHERE rec_key = #{rec_key}
+			AND rec_key NOT IN (SELECT DISTINCT library_key FROM tbl_device WHERE library_key = #{rec_key});
+	</delete>
+	<!-- [수정] library.updateLibraryInfo  -->
+	<update id="updateLibraryInfo" parameterType="map">
+		UPDATE tbl_library
+		SET
+			library_id		= #{library_id}
+			,library_nm		= #{library_nm}
+			,location		= #{location}
+			,library_desc	= #{library_desc}
+			,edit_user		= #{worker}
+			,edit_date		= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] library.checkLibServer -->
+	<select id="checkLibServer" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			server_yn
+		FROM
+			tbl_library
+		WHERE rec_key = #{rec_key}
+	</select>
+	
+</mapper>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="system">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] system.getSystemRule -->
+	<select id="getSystemRule" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,rule_id
+			,rule_nm
+			,option_1
+			,option_2
+			,option_3
+			,rule_desc
+		FROM tbl_system_rule
+		WHERE
+			rule_id = #{rule_id}
+	</select>
+	
+	<!-- [조회] system.getSystemRuleList -->
+	<select id="getSystemRuleList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,T1.rule_id
+			,T1.rule_nm
+			,T1.option_1
+			,T2.type_1
+			,T1.option_2
+			,T2.type_2
+			,T1.option_3
+			,T2.type_3
+			,T1.rule_desc
+		FROM tbl_system_rule T1
+		LEFT OUTER JOIN tbl_system_rule_input_type T2 ON T1.rec_key = T2.rule_key
+		<where>
+		<if test='rule_id != "" and rule_id != null'>
+			AND T1.rule_id like '%'||#{rule_id}||'%'
+		</if>
+		<if test='rule_nm != "" and rule_nm != null'>
+			AND T1.rule_nm like '%'||#{rule_nm}||'%'
+		</if>
+		</where>
+		ORDER BY T1.rule_id
+	</select>
+	
+	<!-- [등록] system.insertSystemRule -->
+	<insert id="insertSystemRule" parameterType="map">
+		INSERT INTO tbl_system_rule(
+			rule_id
+			,rule_nm
+			,option_1
+			,option_2
+			,option_3
+			,rule_desc
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{rule_id}
+			,#{rule_nm}
+			,#{option_1}
+			,#{option_2}
+			,#{option_3}
+			,#{rule_desc}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] system.deleteSystemRule -->
+	<delete id="deleteSystemRule" parameterType="map">
+		DELETE FROM tbl_system_rule
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [수정] system.updateSystemRule -->
+	<update id="updateSystemRule" parameterType="map">
+		UPDATE tbl_system_rule
+		SET
+			option_1 = #{option_1}
+			,option_2 = #{option_2}
+			,option_3 = #{option_3}
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] system.checkSystemRuleDuplicated -->
+	<select id="checkSystemRuleDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM tbl_system_rule
+		WHERE rule_id = #{rule_id}
+	</select>
+	
+</mapper>

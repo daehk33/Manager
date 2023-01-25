@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 대출반납기 연계 데이터 CRUD -->
+<mapper namespace="apiLoanReturn">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] apiLoanReturn.getLoanReturnLastLogKey -->
+	<select id="getLoanReturnLastLogKey" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			MAX(log_key) as log_key
+		FROM tbl_api_loanReturn_use_log
+		<where>
+			library_key = #{library_key}
+			AND device_key = #{device_key}
+		</where>
+	</select>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnUseLogInfo -->
+	<select id="getLoanReturnUseLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_loanReturn_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='log_key != null'>
+				AND log_key = #{log_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiLoanReturn.insertLoanReturnUseLogInfo -->
+	<insert id="insertLoanReturnUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_loanReturn_use_log(
+			library_key
+			,device_key
+			,log_key
+			,log_date
+			,book_title
+			,book_no
+			,book_author
+			,book_place_name
+			,book_isbn
+			,status
+			,user_name
+			,user_id
+			,user_class
+			,user_grade
+			,loan_date
+			,return_date
+			,return_plan_date
+			,device_id
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{log_key}
+			,CASE WHEN #{log_date} = '' THEN NULL ELSE #{log_date}::timestamp END
+			,#{book_title}
+			,#{book_no}
+			,#{book_author}
+			,#{book_place_name}
+			,#{book_isbn}
+			,#{status}
+			,#{user_name}
+			,#{user_id}
+			,#{user_class}
+			,#{user_grade}
+			,#{loan_date}
+			,#{return_date}
+			,#{return_plan_date}
+			,#{device_id}
+		)
+	</insert>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnUseLogInfo -->
+	<update id="updateLoanReturnUseLogInfo" parameterType="map">
+		UPDATE tbl_api_loanReturn_use_log
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,log_date = CASE WHEN #{log_date} = '' THEN NULL ELSE #{log_date}::timestamp END
+			,book_title = #{book_title}
+			,book_no = #{book_no}
+			,book_author = #{book_author}
+			,book_place_name = #{book_place_name}
+			,book_isbn = #{book_isbn}
+			,status = #{status}
+			,user_name = #{user_name}
+			,user_id = #{user_id}
+			,user_class = #{user_class}
+			,user_grade = #{user_grade}
+			,loan_date = #{loan_date}
+			,return_date = #{return_date}
+			,return_plan_date = #{return_plan_date}
+			,device_id = #{device_id}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnRuleInfoList -->
+	<select id="getLoanReturnRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) as library_nm
+			,device_key
+			,fn_device_nm(device_key) as device_nm
+			,TRIM(code) AS code
+			,value_name
+			,description
+			,value1
+			,value2
+			,value3
+			,value5
+			,enable
+		FROM
+			tbl_api_loanReturn_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='code != "" and code != null'>
+				AND code = #{code}
+			</if>
+			<if test='value_name != "" and value_name != null'>
+				AND value_name = #{value_name}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+			<if test='grade != "0" and editable != "" and editable != null'>
+				AND editable = #{editable}
+			</if>
+		</where>
+		ORDER BY library_key, device_key, rec_key
+	</select>
+	
+	<!--  [조회] apiLoanReturn.getLoanReturnRuleInfo -->
+	<select id="getLoanReturnRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM
+			tbl_api_loanReturn_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='code != "" and code != null'>
+				AND code = #{code}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiLoanReturn.insertLoanReturnRuleInfo -->
+	<insert id="insertLoanReturnRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_loanReturn_rule(
+			library_key
+			,device_key
+			,code
+			,value_name
+			,description
+			,value1
+			,value2
+			,value3
+			,value5
+			,enable
+			,update_date
+			,worker
+			,value_type
+			,editable
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{code}
+			,#{value_name}
+			,#{description}
+			,#{value1}
+			,#{value2}
+			,#{value3}
+			,#{value5}
+			,#{enable}
+			,now()
+			,#{worker}
+			,#{value_type}
+			,#{editable}
+		)
+	</insert>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnRuleInfo -->
+	<update id="updateLoanReturnRuleInfo" parameterType="map">
+		UPDATE tbl_api_loanReturn_rule
+		   SET
+			value1 = #{value1}
+			,value2 = #{value2}
+			,value3 = #{value3}
+			,value5 = #{value5}
+			,update_date = now()::date
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+			<if test='editable != "" and editable != null'>	
+				,editable = #{editable}
+			</if>
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnRuleSendResult -->
+	<update id="updateLoanReturnRuleSendResult" parameterType="map">
+		UPDATE tbl_api_loanReturn_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnDIDRuleInfo -->
+	<select id="getLoanReturnDIDRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,device_key
+			,code
+			,value_name
+			,description
+			,value1
+		FROM
+			tbl_api_loanReturn_rule
+		<where>
+			code = '007'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnDIDRuleInfo -->
+	<update id="updateLoanReturnDIDRuleInfo" parameterType="map">
+		UPDATE tbl_api_loanReturn_rule
+		   SET
+			value1 = #{value1}
+			,update_date = now()::date
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnDIDHolidayRule -->
+	<select id="getLoanReturnDIDHolidayRule" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			library_key
+			,fn_library_nm(library_key) as library_nm
+			,device_key
+			,fn_device_nm(device_key) as device_nm
+			,value1
+		FROM
+			tbl_api_loanReturn_rule
+		WHERE
+			library_key = #{library_key}
+			AND device_key = #{device_key}
+			AND code = '015'
+	</select>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnDIDHolidayUseRule -->
+	<update id="updateLoanReturnDIDHolidayUseRule" parameterType="map">
+		UPDATE tbl_api_loanReturn_rule
+		   SET
+			value1 = #{value1}
+			,update_date = now()::date
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+		WHERE 
+			library_key = #{library_key}
+			AND device_key = #{device_key}
+			AND code = '015'
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnHolidayList -->
+	<select id="getLoanReturnHolidayList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,device_key
+			,year
+			,month
+			,days
+		FROM
+			tbl_api_loanreturn_holiday
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnHolidayInfo -->
+	<select id="getLoanReturnHolidayInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,year
+			,month
+			,days
+		FROM
+			tbl_api_loanreturn_holiday
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='year != "" and year != null'>
+				AND year = #{year}
+			</if>
+			<if test='month != "" and month != null'>
+				AND month = #{month}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnHolidayInfo -->
+	<update id="updateLoanReturnHolidayInfo" parameterType="map">
+		UPDATE tbl_api_loanreturn_holiday
+		   SET
+			edit_date = now(),
+			<choose>
+				<when test='days != "" and days != null'>
+					days = #{days},
+				</when>
+				<otherwise>
+					days = NULL,
+				</otherwise>
+			</choose>
+			send_req_yn = #{send_req_yn}
+		<where>
+			rec_key = #{rec_key}
+		</where>
+	</update>
+	
+	<!-- [등록] apiLoanReturn.insertLoanReturnHolidayInfo -->
+	<insert id="insertLoanReturnHolidayInfo" parameterType="map">
+		INSERT INTO tbl_api_loanreturn_holiday(
+			library_key
+			,device_key
+			,year
+			,month
+			,days
+			,create_date
+		) VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{year}
+			,#{month}
+			,#{days}
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] apiLoanReturn.deleteLoanReturnHolidayInfo -->
+	<delete id="deleteLoanReturnHolidayInfo" parameterType="map">
+		DELETE FROM tbl_api_loanreturn_holiday
+		<where>
+			rec_key = #{rec_key}
+		</where>
+	</delete>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnHolidaySendResult -->
+	<update id="updateLoanReturnHolidaySendResult" parameterType="map">
+		UPDATE tbl_api_loanreturn_holiday
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnEquipRuleInfoList -->
+	<select id="getLoanReturnEquipRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) as library_nm
+			,device_key
+			,fn_device_nm(device_key) as device_nm
+			,value_name
+			,com
+			,value1
+			,value2
+			,value3
+			,value4
+			,value5
+			,use_yn
+		FROM
+			tbl_api_loanreturn_equip_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='value_name != "" and value_name != null'>
+				AND value_name = #{value_name}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+		ORDER BY library_key, device_key, rec_key
+	</select>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnEquipRuleInfo -->
+	<select id="getLoanReturnEquipRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM
+			tbl_api_loanreturn_equip_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='value_name != "" and value_name != null'>
+				AND value_name = #{value_name}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnEquipRuleInfo -->
+	<update id="updateLoanReturnEquipRuleInfo" parameterType="map">
+		UPDATE tbl_api_loanreturn_equip_rule
+		   SET
+			com = #{com}
+			,value1 = #{value1}
+			,value2 = #{value2}
+			,value3 = #{value3}
+			,value4 = #{value4}
+			,value5 = #{value5}
+			,use_yn = #{use_yn}
+			,send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [등록] apiLoanReturn.insertLoanReturnEquipRuleInfo -->
+	<insert id="insertLoanReturnEquipRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_loanreturn_equip_rule(
+			library_key
+			,device_key
+			,value_name
+			,com
+			,value1
+			,value2
+			,value3
+			,value4
+			,value5
+			,use_yn
+		) VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{value_name}
+			,#{com}
+			,#{value1}
+			,#{value2}
+			,#{value3}
+			,#{value4}
+			,#{value5}
+			,#{use_yn}
+		)
+	</insert>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnEquipRuleSendResult -->
+	<update id="updateLoanReturnEquipRuleSendResult" parameterType="map">
+		UPDATE tbl_api_loanreturn_equip_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiLoanReturn.getLoanReturnBannerSettingInfo -->
+	<select id="getLoanReturnBannerSettingInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) as library_nm
+			,device_key
+			,fn_device_nm(device_key) as device_nm
+			,time
+			,loan_cnt
+			,type
+			,return_plan_date
+			,loan_date
+		FROM
+			tbl_api_loanreturn_banner_setting
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+		</where>
+		order by library_key, device_key, rec_key
+	</select>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnBannerSettingInfo -->
+	<update id="updateLoanReturnBannerSettingInfo" parameterType="map">
+		UPDATE tbl_api_loanreturn_banner_setting
+		   SET
+			time = #{time}
+			,loan_cnt = #{loan_cnt}
+			,type = #{type}
+			,return_plan_date = #{return_plan_date}
+			,loan_date = #{loan_date}
+			,send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [등록] apiLoanReturn.insertLoanReturnBannerSettingInfo -->
+	<insert id="insertLoanReturnBannerSettingInfo" parameterType="map">
+		INSERT INTO tbl_api_loanreturn_banner_setting(
+			library_key
+			,device_key
+			,time
+			,loan_cnt
+			,type
+			,return_plan_date
+			,loan_date
+		) VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{time}
+			,#{loan_cnt}
+			,#{type}
+			,#{return_plan_date}
+			,#{loan_date}
+		)
+	</insert>
+	
+	<!-- [수정] apiLoanReturn.updateLoanReturnBannerSettingSendResult -->
+	<update id="updateLoanReturnBannerSettingSendResult" parameterType="map">
+		UPDATE tbl_api_loanreturn_banner_setting
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+</mapper>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 장비연계 데이터 CRUD -->
+<mapper namespace="api">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<select id="getConnectTest" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 1 as row
+	</select>
+
+	<!-- [조회] api.getLoanInfo -->
+	<select id="getLoanInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_loan
+		<where>
+			return_date is null
+	    <if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+	    <if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+	    <if test='book_key != null'>
+			AND book_key = #{book_key}
+		</if>
+	    <if test='member_key != null'>
+			AND member_key = #{member_key}
+		</if>
+		</where>
+	</select>
+
+
+	<!-- [등록] api.insertEnterInfo  -->
+	<insert id="insertEnterInfo" parameterType="map">
+		INSERT INTO tbl_api_enter(
+			library_key
+			,device_key
+			,member_key
+			,enter_date
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{member_key}
+			,TO_TIMESTAMP(#{enter_date}, 'YYYY-MM-DD HH24:MI:SS')
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [등록] api.insertLoanInfo  -->
+	<insert id="insertLoanInfo" parameterType="map">
+		INSERT INTO tbl_api_loan(
+			library_key
+			,device_key
+			,book_key
+			,member_key
+			,loan_date
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{book_key}
+			,#{member_key}
+			,TO_TIMESTAMP(#{loan_date}, 'YYYY-MM-DD HH24:MI:SS')
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [등록] api.insertReturnInfo  -->
+	<insert id="insertReturnInfo" parameterType="map">
+		INSERT INTO tbl_api_loan(
+			library_key
+			,device_key
+			,book_key
+			,member_key
+			,return_date
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{book_key}
+			,#{member_key}
+			,TO_TIMESTAMP(#{return_date}, 'YYYY-MM-DD HH24:MI:SS')
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	<!-- [수정] api.updateLibReturnInfo  -->
+	<update id="updateReturnInfo" parameterType="map">
+		UPDATE tbl_api_loan 
+		   SET 
+			return_date = TO_TIMESTAMP(#{return_date}, 'YYYY-MM-DD HH24:MI:SS')
+			,edit_user = #{worker}
+			,edit_date = now()
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	<!-- [등록] api.insertEventInfo  -->
+	<insert id="insertEventInfo" parameterType="map">
+		INSERT INTO tbl_api_event(
+			library_key
+			,device_key
+			,event_type
+			,event_code
+			,event_msg
+			,event_date
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)		
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{event_type}
+			,#{event_code}
+			,#{event_msg}
+			,TO_TIMESTAMP(#{event_date}, 'YYYY-MM-DD HH24:MI:SS')
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+</mapper>

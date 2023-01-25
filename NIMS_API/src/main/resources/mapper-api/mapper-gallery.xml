@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="gallery">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] gallery.getResvLoanUseLogInfoList -->
+	<select id="getResvLoanUseLogInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			idx
+			,user_id
+			,user_name
+			,book_no
+			,title
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,isbn
+			,insert_date
+			,reservation_date
+			,out_date
+			,loan_date
+			,reservation_expire_date
+			,insert_no
+			,cabinet
+			,module
+			,sub_cabinet
+			,status
+		FROM
+			cabinet_log_tbl
+		<where>
+			<if test='interval != null'>
+				insert_date > to_char(now() - '1 day'::interval*#{interval},'YYYYMMDD')
+			</if>
+		</where>
+		ORDER BY idx
+	</select>
+	
+	<!-- [조회] gallery.getResvLoanCabinetModuleInfoList -->
+	<select id="getResvLoanCabinetModuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			cabinet
+			,insert_no
+			,title
+			,book_rfid
+			,isbn
+			,book_no
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,reservation_date
+			,reservation_expire_date
+			,lib_code
+			,lib_name
+			,status
+		FROM
+			cabinet_module_tbl
+		<where>
+			<if test='cabinet != "" and cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+		</where>
+		ORDER BY cabinet, insert_no
+	</select>
+	
+	<!-- [추가] gallery.insertResvLoanCabinetModuleInfo -->
+	<insert id="insertResvLoanCabinetModuleInfo" parameterType="map">
+		INSERT INTO cabinet_module_tbl(
+			cabinet
+			,insert_no
+			,title
+			,book_rfid
+			,isbn
+			,book_no
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,reservation_date
+			,reservation_expire_date
+			,lib_code
+			,lib_name
+			,status
+		)
+		VALUES (
+			#{cabinet}
+			,#{insert_no}
+			,#{title}
+			,#{book_rfid}
+			,#{isbn}
+			,#{book_no}
+			,#{author}
+			,#{publisher}
+			,#{vol_code}
+			,#{call_no}
+			,#{location_no}
+			,#{location_name}
+			,CASE WHEN #{reservation_date} = '' THEN NULL ELSE #{reservation_date}::timestamp END
+			,CASE WHEN #{reservation_expire_date} = '' THEN NULL ELSE #{reservation_expire_date}::timestamp END
+			,#{lib_code}
+			,#{lib_name}
+			,#{status}
+		)
+	</insert>
+	
+	<!-- [삭제] gallery.deleteResvLoanCabinetModule -->
+	<delete id="deleteResvLoanCabinetModule" parameterType="map">
+		DELETE FROM cabinet_module_tbl
+		WHERE
+			cabinet = #{cabinet}
+	</delete>
+	
+	<!-- [조회] gallery.getResvLoanCabinetInfoList -->
+	<select id="getResvLoanCabinetInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			cabinet
+			,module
+			,sub_cabinet
+			,insert_date
+			,user_id
+			,user_name
+			,book_count
+			,status
+			,error
+			,cabinet_type
+		FROM
+			cabinet_tbl
+		<where>
+			<if test='cabinet != "" and cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+			<if test='module != "" and module != null'>
+				AND module = #{module}
+			</if>
+		</where>
+		ORDER BY cabinet, module, sub_cabinet
+	</select>
+	
+	<!-- [추가] gallery.insertResvLoanCabinetInfo -->
+	<insert id="insertResvLoanCabinetInfo" parameterType="map">
+		INSERT INTO cabinet_tbl(
+			cabinet
+			,module
+			,sub_cabinet
+			,insert_date
+			,user_id
+			,user_name
+			,book_count
+			,status
+			,error
+			,cabinet_type
+		)
+		VALUES (
+			#{cabinet}
+			,#{module}
+			,#{sub_cabinet}
+			,CASE WHEN #{insert_date} = '' THEN NULL ELSE #{insert_date}::timestamp END
+			,#{user_id}
+			,#{user_name}
+			,#{book_count}
+			,#{status}
+			,#{error}
+			,#{cabinet_type}
+		)
+	</insert>
+	
+	<!-- [삭제] gallery.deleteResvLoanCabinetInfo -->
+	<delete id="deleteResvLoanCabinetInfo" parameterType="map">
+		DELETE FROM cabinet_tbl
+		WHERE
+			module = #{module}
+			AND module NOT IN (1, 2, 3)
+	</delete>
+	
+	<!-- [수정] gallery.updateResvLoanCabinetInfo -->
+	<update id="updateResvLoanCabinetInfo" parameterType="map">
+		UPDATE cabinet_tbl
+		   SET
+			status = #{status},
+			cabinet_type = #{cabinet_type}
+		WHERE
+			cabinet = #{cabinet}
+	</update>
+	
+	<!-- [조회] gallery.getResvLoanModuleInfoList -->
+	<select id="getResvLoanModuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			module_id
+			,cabinet_no
+			,direction
+			,column_cnt
+			,row_cnt
+			,start_left
+			,start_top
+			,width
+			,height
+			,out_type
+		FROM
+			module_tbl
+		<where>
+			<if test='module_id != "" and module_id != null'>
+				module_id = #{module_id}
+			</if>
+		</where>
+		ORDER BY module_id
+	</select>
+	
+	<!-- [추가] gallery.insertResvLoanModule -->
+	<insert id="insertResvLoanModule" parameterType="map">
+		INSERT INTO module_tbl(
+			module_id
+			,cabinet_no
+			,direction
+			,column_cnt
+			,row_cnt
+			,start_left
+			,start_top
+			,width
+			,height
+			,out_type
+		)
+		VALUES (
+			#{module_id}
+			,#{cabinet_no}
+			,#{direction}
+			,#{column_cnt}
+			,#{row_cnt}
+			,#{start_left}
+			,#{start_top}
+			,#{width}
+			,#{height}
+			,#{out_type}
+		)
+	</insert>
+	
+	<!-- [삭제] gallery.deleteResvLoanModule -->
+	<delete id="deleteResvLoanModule" parameterType="map">
+		DELETE FROM module_tbl
+		WHERE
+			module_id = #{module_id}
+			AND module_id NOT IN (1, 2, 3)
+	</delete>
+	
+	<!-- [조회] gallery.getResvLoanRuleInfoList -->
+	<select id="getResvLoanRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			*
+		FROM
+			manage_tbl
+		ORDER BY manage_id::integer
+	</select>
+	
+	<!-- [수정] gallery.updateResvLoanRule -->
+	<update id="updateResvLoanRuleInfo" parameterType="map">
+		UPDATE manage_tbl
+		   SET
+			use = #{use},
+			value_1 = #{value_1}
+		WHERE
+			manage_id = #{manage_id}
+	</update>
+	
+</mapper>

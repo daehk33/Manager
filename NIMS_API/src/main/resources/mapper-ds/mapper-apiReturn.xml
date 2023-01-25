@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 대출반납기 연계 데이터 CRUD -->
+<mapper namespace="apiReturn">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] apiReturn.getReturnLastLogInfo -->
+	<select id="getReturnLastLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			book_state_date
+			,book_state_time
+		FROM tbl_api_return_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+		ORDER BY BOOK_STATE_DATE DESC, book_state_date desc, book_state_time desc
+		LIMIT 1
+	</select>
+	
+	<!-- [조회] apiReturn.getReturnUseLogInfo -->
+	<select id="getReturnUseLogInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM tbl_api_return_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='BOOK_STATE_DATE != "" and BOOK_STATE_DATE != null'>
+				AND book_state_date = #{BOOK_STATE_DATE}
+			</if>
+			<if test='BOOK_STATE_TIME != "" and BOOK_STATE_TIME != null'>
+				AND book_state_time = #{BOOK_STATE_TIME}
+			</if>
+			<if test='BOOK_NO != "" and BOOK_NO!= null'>
+				AND book_no = #{BOOK_NO}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiReturn.insertReutrnUseLogInfo -->
+	<insert id="insertReturnUseLogInfo" parameterType="map">
+		INSERT INTO tbl_api_return_use_log(
+			library_key
+			,device_key
+			,book_state_date
+			,book_state_time
+			,book_state
+			,place_name
+			,search_year
+			,search_month
+			,id_no
+			,st_name
+			,book_no
+			,book_name
+			,book_author
+			,book_loan_date
+			,book_return_date
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{BOOK_STATE_DATE}
+			,#{BOOK_STATE_TIME}
+			,#{BOOK_STATE}
+			,#{PLACE_NAME}
+			,#{SEARCH_YEAR}
+			,#{SEARCH_MONTH}
+			,#{ID_NO}
+			,#{ST_NAME}
+			,#{BOOK_NO}
+			,#{BOOK_NAME}
+			,#{BOOK_AUTHOR}
+			,#{BOOK_LOAN_DATE}
+			,#{BOOK_RETURN_DATE}
+		)
+	</insert>
+	
+	<!-- [수정] apiReturn.updateReturnUseLogInfo -->
+	<update id="updateReturnUseLogInfo" parameterType="map">
+		UPDATE tbl_api_return_use_log
+		   SET
+			library_key = #{library_key}
+			,device_key = #{device_key}
+			,book_state_date = #{BOOK_STATE_DATE}
+			,book_state_time = #{BOOK_STATE_TIME}
+			,book_state = #{BOOK_STATE}
+			,place_name = #{PLACE_NAME}
+			,search_year = #{SEARCH_YEAR}
+			,search_month = #{SEARCH_MONTH}
+			,id_no = #{ID_NO}
+			,st_name = #{ST_NAME}
+			,book_no = #{BOOK_NO}
+			,book_name = #{BOOK_NAME}
+			,book_author = #{BOOK_AUTHOR}
+			,book_loan_date = #{BOOK_LOAN_DATE}
+			,book_return_date = #{BOOK_RETURN_DATE}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] apiReturn.getReturnRuleInfoList -->
+	<select id="getReturnRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,library_key
+			,fn_library_nm(library_key) as library_nm
+			,device_key
+			,fn_device_nm(device_key) as device_nm
+			,rule_name
+			,rule_value
+			,file_name
+		FROM
+			tbl_api_return_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='rule_name != "" and rule_name != null'>
+				AND rule_name = #{rule_name}
+			</if>
+			<if test='send_req_yn != "" and send_req_yn != null'>
+				AND send_req_yn = #{send_req_yn}
+			</if>
+			<if test='file_name != "" and file_name != null'>
+				AND file_name = #{file_name}
+			</if>
+			<if test='grade != "0" and editable != "" and editable != null'>
+				AND editable = #{editable}
+			</if>
+		</where>
+		ORDER BY rec_key
+	</select>
+	
+	<!-- [조회] apiReturn.getReturnRuleInfo -->
+	<select id="getReturnRuleInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+		FROM
+			tbl_api_return_rule
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='rule_name != "" and rule_name != null'>
+				AND rule_name = #{rule_name}
+			</if>
+			<if test='file_name != "" and file_name != null'>
+				AND file_name = #{file_name}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] apiReturn.insertReturnRuleInfo -->
+	<insert id="insertReturnRuleInfo" parameterType="map">
+		INSERT INTO tbl_api_return_rule(
+			library_key
+			,device_key
+			,rule_name
+			,rule_value
+			,update_date
+			,worker
+			,file_name
+			,editable
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{rule_name}
+			,#{rule_value}
+			,now()
+			,#{worker}
+			,#{file_name}
+			,#{editable}
+		)
+	</insert>
+	
+	<!-- [수정] apiReturn.updateReturnRuleInfo -->
+	<update id="updateReturnRuleInfo" parameterType="map">
+		UPDATE tbl_api_return_rule
+		   SET
+			rule_value = #{rule_value}
+			,update_date = now()::date
+			,worker = #{worker}
+			,send_req_yn = #{send_req_yn}
+			,editable = #{editable}
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] apiReturn.updateReturnRuleSendResult -->
+	<update id="updateReturnRuleSendResult" parameterType="map">
+		UPDATE tbl_api_return_rule
+		   SET
+			send_req_yn = #{send_req_yn}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+</mapper>

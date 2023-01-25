@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="log">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<!-- [조회] log.getLogCount -->
+	<select id="getLogCount" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM tbl_system_log
+		<where>
+		<if test='library_key != null and library_key != null'>
+    		AND library_key = #{library_key}
+    	</if>
+		<if test='startDate != null and endDate != null'>
+    		AND log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+    	</if>
+		</where>
+	</select>
+	
+	<!-- [조회] log.getLogList -->
+	<select id="getLogList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			log.rec_key
+			,manager_key
+			,manager_id
+			,manager_nm
+			,manager_grade
+			,fn_code_value('G0002', manager_grade::TEXT) AS manager_grade_nm
+			,library_id
+			,library_nm
+			,log_menu
+			,menu.menu_nm AS log_menu_nm
+			,log_type
+			,fn_code_value('G0005', log_type) AS log_type_nm
+			,log_content
+			,TO_CHAR(log_date,'YYYY-MM-DD HH24:MI:SS') AS log_date
+		FROM tbl_system_log log
+			LEFT JOIN tbl_menu menu ON menu.menu_id = log.log_menu
+		<where>
+		<if test='startDate != null and endDate != null'>
+			AND log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+		</if>
+		</where>
+		ORDER BY log_date DESC
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] log.insertLogInfo -->
+	<insert id="insertLogInfo" parameterType="map">
+		INSERT INTO tbl_system_log (
+			manager_key
+			,manager_id
+			,manager_nm
+			,manager_grade
+			,library_key
+			,library_id
+			,library_nm
+			,log_menu
+			,log_type
+			,log_content
+			,log_date
+		)
+		VALUES(
+			#{manager_key}
+			,#{manager_id}
+			,#{manager_nm}
+			,#{manager_grade}
+			,#{library_key}
+			,#{library_id}
+			,#{library_nm}
+			,(SELECT menu_id FROM tbl_menu WHERE menu_url = #{menu_path})
+			,#{log_type}
+			,#{log_content}
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] log.deleteLogInfo -->
+	<delete id="deleteLogInfo" parameterType="map">
+		DELETE FROM tbl_system_log
+		<where>
+		<if test='startDate != null and endDate != null'>
+    		AND log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+    	</if>
+		</where>
+	</delete>
+</mapper>

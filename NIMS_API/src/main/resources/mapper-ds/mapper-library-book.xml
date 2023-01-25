@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="libraryBook">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] libraryBook.getLibBookCount  -->
+	<select id="getLibBookCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_api_book
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='book_isbn != "" and book_isbn != null'>
+			AND book_isbn LIKE '%'||#{book_isbn}||'%'
+		</if>
+		<if test='book_title != "" and book_title != null'>
+			AND book_title LIKE '%'||#{book_title}||'%'
+		</if>
+		</where>	
+	</select>
+	<!-- [조회] libraryBook.getLibBookInfo  -->
+	<select id="getLibBookInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,library_key
+			,device_key
+			,book_isbn
+			,book_title
+			,book_cnt
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_api_book
+		<where>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='book_isbn != "" and book_isbn != null'>
+			AND book_isbn = #{book_isbn}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] libraryBook.getLibBookList  -->
+	<select id="getLibBookList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			b.rec_key
+			,b.library_key
+			,l.library_nm || '[' || l.library_id || ']' AS library_nm
+			,b.device_key
+			,b.book_isbn
+			,b.book_title
+			,b.book_cnt
+			,b.create_user
+			,b.edit_user
+			,TO_CHAR(b.edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(b.create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_api_book b
+			LEFT OUTER JOIN tbl_library l on b.library_key = l.rec_key
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='book_isbn != "" and book_isbn != null'>
+			AND book_isbn LIKE '%'||#{book_isbn}||'%'
+		</if>
+		<if test='book_title != "" and book_title != null'>
+			AND book_title LIKE '%'||#{book_title}||'%'
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	<!-- [등록] libraryBook.insertLibBookInfo  -->
+	<insert id="insertLibBookInfo" parameterType="map">
+		INSERT INTO tbl_api_book(
+			library_key
+			,device_key
+			,book_isbn
+			,book_title
+			,book_cnt
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{book_isbn}
+			,#{book_title}
+			,#{book_cnt}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	
+	</insert>
+	<!-- [삭제] libraryBook.deleteLibBookInfo  -->
+	<delete id="deleteLibBookInfo" parameterType="map">
+		DELETE FROM tbl_api_book
+		WHERE rec_key = #{rec_key}
+	</delete>
+	<!-- [수정] libraryBook.updateLibBookInfo  -->
+	<update id="updateLibBookInfo" parameterType="map">
+		UPDATE tbl_api_book
+		SET
+			library_key		= #{library_key}
+			,device_key		= #{device_key}
+			,book_isbn		= #{book_isbn}
+			,book_title		= #{book_title}
+			,book_cnt		= #{book_cnt}
+			,edit_user		= #{worker}
+			,edit_date		= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+</mapper>

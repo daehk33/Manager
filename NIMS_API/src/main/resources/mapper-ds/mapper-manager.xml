@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="manager">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] manager.getManagerInfo -->
+	<select id="getManagerInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			manager.rec_key
+			,manager.manager_id
+			,manager.manager_nm
+			,manager.password
+			,manager.manager_grade
+			,manager.model_auth
+			,manager.library_key
+			,library.library_nm
+			,fn_code_value('G0002', manager.manager_grade::text) AS manager_grade_nm
+			,manager.create_user
+			,manager.edit_user
+			,manager.theme
+			,TO_CHAR(manager.edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(manager.create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+			,TO_CHAR(manager.passwd_edit_date, 'YYYY-MM-DD HH24:MI:SS') AS passwd_edit_date
+			,TO_CHAR(manager.login_date, 'YYYY-MM-DD HH24:MI:SS') AS login_date
+			,(SELECT FN_CODE_LIST('G0003')) AS initial_password
+			,(SELECT option_1 FROM tbl_system_rule WHERE rule_id = 'R0002') AS slibrary_yn
+			,(SELECT option_1 FROM tbl_system_rule WHERE rule_id = 'R0003') AS loanReturn_yn
+			,(SELECT option_1 FROM tbl_system_rule WHERE rule_id = 'R0004') AS return_yn
+			,(SELECT option_1 FROM tbl_system_rule WHERE rule_id = 'R0005') AS resvLoan_yn
+			,(SELECT option_1 FROM tbl_system_rule WHERE rule_id = 'R0006') AS gate_yn
+		FROM tbl_manager manager
+		LEFT OUTER JOIN tbl_library library ON manager.library_key = library.rec_key
+		WHERE manager.rec_key = #{rec_key}
+	    <if test='manager_id != "" and manager_id != null'>
+			OR manager.manager_id	= #{manager_id}
+		</if>
+	</select>
+	
+	<!-- [조회] manager.checkManagerDuplicated -->
+	<select id="checkManagerDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM tbl_manager
+		WHERE manager_id = #{manager_id}
+	</select>
+
+	<!-- [조회] manager.getManagerOriInfo -->
+	<select id="getManagerInfoForLog" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			manager.rec_key
+			,manager.manager_id
+			,manager.manager_nm
+			,manager.manager_grade
+			,manager.library_key
+			,library.library_id
+			,library.library_nm
+		FROM tbl_manager manager
+			LEFT OUTER JOIN tbl_library library ON manager.library_key = library.rec_key
+		WHERE manager.rec_key = #{manager_key}
+	</select>
+	
+	<!-- [조회] manager.getManagerCount -->
+	<select id="getManagerCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM tbl_manager
+		<where>
+	    <if test='manager_id != "" and manager_id != null'>
+			AND manager_id	LIKE '%'||#{manager_id}||'%'
+		</if>
+	    <if test='manager_nm != "" and manager_nm != null'>
+			AND manager_nm	LIKE '%'||#{manager_nm}||'%'
+		</if>
+	    <if test='manager_grade != null'>
+			AND manager_grade	= #{manager_grade}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] manager.getManagerList -->
+	<select id="getManagerList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			manager.rec_key
+			,manager.manager_id
+			,manager.manager_nm
+			,manager.password
+			,manager.manager_grade
+			,manager.model_auth
+			,manager.library_key
+			,library.library_nm
+			,fn_code_value('G0002', manager.manager_grade::text) AS manager_grade_nm
+			,manager.create_user
+			,manager.edit_user
+			,TO_CHAR(manager.edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date
+			,TO_CHAR(manager.create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+			,TO_CHAR(manager.passwd_edit_date, 'YYYY-MM-DD HH24:MI:SS') AS passwd_edit_date
+			,TO_CHAR(manager.login_date, 'YYYY-MM-DD HH24:MI:SS') AS login_date
+		FROM tbl_manager manager
+		LEFT OUTER JOIN tbl_library library on manager.library_key = library.rec_key
+		<where>
+		<if test='manager_id != "" and manager_id != null'>
+			AND manager.manager_id	LIKE '%'||#{manager_id}||'%'
+		</if>
+		<if test='manager_nm != "" and manager_nm != null'>
+			AND manager.manager_nm	LIKE '%'||#{manager_nm}||'%'
+		</if>
+		<if test='manager_grade != null'>
+			AND manager.manager_grade	= #{manager_grade}
+		</if>
+		</where>
+		ORDER BY manager.rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] manager.insertManagerInfo -->
+	<insert id="insertManagerInfo" parameterType="map">
+		INSERT INTO tbl_manager(
+			manager_id
+			,manager_nm
+			,password
+			,manager_grade
+			,model_auth
+			,library_key
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+			,passwd_edit_date
+		)
+		VALUES (
+			#{manager_id}
+			,#{manager_nm}
+			,#{password}
+			,#{manager_grade}
+			,#{model_auth}
+			,#{library_key}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+			,now()
+		)
+	
+	</insert>
+	
+	<!-- [삭제] manager.deleteManagerInfo -->
+	<delete id="deleteManagerInfo" parameterType="map">
+		DELETE FROM tbl_manager
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [수정] manager.updateManagerInfo -->
+	<update id="updateManagerInfo" parameterType="map">
+		UPDATE tbl_manager
+		SET
+    <if test='manager_id != "" and manager_id != null'>
+			manager_id	= #{manager_id}
+		</if>
+	    <if test='manager_nm != "" and manager_nm != null'>
+			,manager_nm	= #{manager_nm}
+		</if>
+	    <if test='password != "" and password != null'>
+			,password	= #{password}
+		</if>
+	    <if test='manager_grade != null'>
+			,manager_grade	= #{manager_grade}
+		</if>
+		<if test='model_auth != null'>
+			,model_auth	= #{model_auth}
+		</if>
+	    <if test='library_key != null'>
+			,library_key = #{library_key}
+		</if>
+			,edit_user			= #{worker}
+			,edit_date			= now()
+			,passwd_edit_date	= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] manager.updateManagerLogin -->
+	<update id="updateManagerLogin" parameterType="map">
+		UPDATE tbl_manager
+		SET
+			login_date = now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] manager.updateManagerPassword -->
+	<update id="updateManagerPassword" parameterType="map">
+		UPDATE tbl_manager
+		SET
+			password	= #{new_password}
+			,edit_user			= #{worker}
+			,edit_date			= now()
+			,passwd_edit_date	= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] manager.resetManagerPassword -->
+	<update id="resetManagerpassword" parameterType="map">
+		UPDATE tbl_manager
+		SET
+			password = (select code_value from tbl_code where code = 'defaultPassword')
+		WHERE rec_key = #{rec_key} 
+	</update>
+	
+	<!-- [수정] manager.updateManagerTheme -->
+	<update id="updateManagerTheme" parameterType="map">
+		UPDATE tbl_manager
+		SET
+			theme = #{theme}
+		WHERE rec_key = #{rec_key}
+	</update>
+
+</mapper>
