@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="resvLoan">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] resvLoan.getResvLoanBookRankListCnt -->
+	<select id="getResvLoanBookRankListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM (
+			SELECT
+				fn_library_nm(library_key) as library_nm,
+				book_no,
+				title,
+				author,
+				count(*) AS cnt
+			FROM
+				view_resvLoan_use_log
+			WHERE
+				status = 'L'
+				AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library_key = #{library_key}
+				</if>
+			GROUP BY
+				library_key, book_no, title, author
+			) a
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanBookRankList -->
+	<select id="getResvLoanBookRankList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY count(*) desc) AS rwonum,
+			fn_library_nm(library_key) as library_nm,
+			book_no,
+			title,
+			author,
+			count(*) AS cnt
+		FROM
+			view_resvLoan_use_log
+		WHERE
+			status = 'L'
+			AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		GROUP BY
+			library_key, book_no, title, author
+		ORDER BY cnt DESC
+		<if test='limit != "" and limit != null'>
+			LIMIT #{limit}
+		</if>
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanUserRankListCnt -->
+	<select id="getResvLoanUserRankListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM (
+			SELECT
+				fn_library_nm(library_key) as library_nm,
+				t1.user_id,
+				t1.user_name,
+				TO_CHAR(t2.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+				count(*) AS cnt
+			FROM
+				view_resvLoan_use_log t1
+			LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_resvLoan_use_log group by user_id ) t2 on t1.user_id = t2.user_id
+			WHERE
+				status = 'L'
+				AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library_key = #{library_key}
+				</if>
+				<if test='user_id != "" and user_id != unll'>
+					AND t1.user_id = #{user_id}
+				</if>
+				<if test='user_name != "" and user_name != null'>
+					AND t1.user_name like '%" || #{user_name} || '%'
+				</if>
+			GROUP BY
+				library_key, t1.user_id, user_name, recent_date
+		)a
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanUserRankList -->
+	<select id="getResvLoanUserRankList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			fn_library_nm(library_key) as library_nm,
+			t1.user_id,
+			t1.user_name,
+			TO_CHAR(t2.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+			count(*) AS cnt
+		FROM
+			view_resvLoan_use_log t1
+		LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_resvLoan_use_log group by user_id ) t2 on t1.user_id = t2.user_id
+		WHERE
+			status = 'L'
+			AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='user_id != "" and user_id != unll'>
+				AND t1.user_id = #{user_id}
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND t1.user_name like '%" || #{user_name} || '%'
+			</if>
+		GROUP BY
+			library_key, t1.user_id, user_name, recent_date
+		ORDER BY cnt DESC
+		<if test='limit != "" and limit != null'>
+			LIMIT #{limit}
+		</if>
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanBookListCnt -->
+	<select id="getResvLoanBookListCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS cnt
+		FROM
+			tbl_api_resvLoan_cabinet_module T1
+			LEFT OUTER JOIN tbl_api_resvLoan_cabinet T2 ON T1.cabinet = T2.cabinet AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+		<where>
+			T1.status = '1'
+			<if test='title != "" and title != null'>
+				AND T1.title LIKE '%' || #{title} || '%'
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				AND T1.book_no LIKE '%' || #{book} || '%'
+			</if>
+		</where>
+	</select>
+	<!-- [조회] resvLoan.getResvLoanBookList -->
+	<select id="getResvLoanBookList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,fn_library_nm(T1.library_key) AS library_nm
+			,fn_device_nm(T1.device_key) AS device_nm
+			,T1.cabinet
+			,T1.insert_no
+			,T1.title
+			,T1.book_rfid
+			,T1.isbn
+			,T1.book_no
+			,T1.author
+			,T1.publisher
+			,TO_CHAR(T2.insert_date, 'YYYY-MM-DD HH24:MI:SS') AS insert_date
+			,TO_CHAR(T1.reservation_date, 'YYYY-MM-DD HH24:MI:SS') AS reservation_date
+			,TO_CHAR(T1.reservation_expire_date, 'YYYY-MM-DD HH24:MI:SS') AS reservation_expire_date
+		FROM
+			tbl_api_resvLoan_cabinet_module T1
+			LEFT OUTER JOIN tbl_api_resvLoan_cabinet T2 ON T1.cabinet = T2.cabinet AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+		<where>
+			T1.status = '1'
+			<if test='title != "" and title != null'>
+				AND T1.title LIKE '%' || #{title} || '%'
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				AND T1.book_no LIKE '%' || #{book} || '%'
+			</if>
+		</where> 
+	</select>
+	
+
+	<!-- [조회] resvLoan.getResvLoanCabinetListCnt -->
+	<select id="getResvLoanCabinetListCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*) AS cnt 
+		FROM (
+			SELECT
+				T1.rec_key
+				,T1.library_key
+				,fn_library_nm(T1.library_key) AS library_nm
+				,T1.device_key
+				,fn_device_nm(T1.device_key) AS device_nm
+				,T2.module
+				,(SELECT direction FROM fn_direction_nm(T1.cabinet)) AS direction
+				,(SELECT direction_nm FROM fn_direction_nm(T1.cabinet)) AS direction_nm
+				,T1.cabinet
+				,T1.insert_no
+				,T2.user_id
+				,T2.user_name
+				,T1.title
+				,T1.book_rfid
+				,T1.isbn
+				,T1.book_no
+				,T1.author
+				,T1.publisher
+				,T1.reservation_date
+				,T1.reservation_expire_date
+				,T2.status AS cabinet_status
+				,T1.status AS cabinet_module_status
+				,T2.error
+			FROM
+				tbl_api_resvLoan_cabinet_module T1
+				LEFT OUTER JOIN tbl_api_resvLoan_cabinet T2 on T1.cabinet = T2.cabinet AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+				INNER JOIN tbl_device T3 on T1.device_key = T3.rec_key
+			ORDER BY T1.library_key, T1.device_key, T1.cabinet, T1.insert_no
+		) cabinet
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='direction != "" and direction != null'>
+				AND direction::char = #{direction}
+			</if>
+			<if test='cabinet != "" and cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+			<if test='insert_no != "" and insert_no != null'>
+				AND insert_no = #{insert_no}
+			</if>
+			<if test='title != "" and title != null'>
+				AND title like '%' || #{title} || '%'
+			</if>
+			<if test='author != "" and author != null'>
+				AND author like '%' || #{author} || '%'
+			</if>
+			<if test='publisher != "" and publisher != null'>
+				AND publisher like '%' || #{publisher} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "1"'>
+				AND T1.book_no != ''
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "2"'>
+				AND (T1.book_no is null OR length(T1.book_no) = 0)
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanCabinetList -->
+	<select id="getResvLoanCabinetList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT * 
+		FROM (
+			SELECT
+				T1.rec_key
+				,T1.library_key
+				,fn_library_nm(T1.library_key) AS library_nm
+				,T1.device_key
+				,fn_device_nm(T1.device_key) AS device_nm
+				,T2.module
+				,(SELECT direction FROM fn_direction_nm(T1.cabinet)) AS direction
+				,(SELECT direction_nm FROM fn_direction_nm(T1.cabinet)) AS direction_nm
+				,T1.cabinet
+				,T1.insert_no
+				,T2.user_id
+				,T2.user_name
+				,T1.title
+				,T1.book_rfid
+				,T1.isbn
+				,T1.book_no
+				,T1.author
+				,T1.publisher
+				,T1.reservation_date
+				,T1.reservation_expire_date
+				,T2.status AS cabinet_status
+				,T1.status AS cabinet_module_status
+				,T2.error
+			FROM
+				tbl_api_resvLoan_cabinet_module T1
+				LEFT OUTER JOIN tbl_api_resvLoan_cabinet T2 on T1.cabinet = T2.cabinet AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+				INNER JOIN tbl_device T3 on T1.device_key = T3.rec_key
+			ORDER BY T1.library_key, T1.device_key, T1.cabinet, T1.insert_no
+		) cabinet
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='direction != "" and direction != null'>
+				AND direction::char = #{direction}
+			</if>
+			<if test='cabinet != "" and cabinet != null'>
+				AND cabinet = #{cabinet}
+			</if>
+			<if test='insert_no != "" and insert_no != null'>
+				AND insert_no = #{insert_no}
+			</if>
+			<if test='title != "" and title != null'>
+				AND title like '%' || #{title} || '%'
+			</if>
+			<if test='author != "" and author != null'>
+				AND author like '%' || #{author} || '%'
+			</if>
+			<if test='publisher != "" and publisher != null'>
+				AND publisher like '%' || #{publisher} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='cabinet_stauts != "" and cabinet_status != null'>
+				AND cabinet_status = #{cabinet_status}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanCabinetTotalInfo -->
+	<select id="getResvLoanCabinetTotalInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			C.rec_key AS cabinet_key
+			,CM.rec_key AS cabinet_module_key
+			,M.rec_key AS module_key
+			,CM.cabinet
+			,C.sub_cabinet
+			,M.module_id
+			,M.direction
+			,DN.direction_nm || ' - ' || DN.row_num AS direction_nm
+			,CM.insert_no
+			,C.user_id
+			,C.user_name
+			,CM.title
+			,CM.book_rfid
+			,CM.isbn
+			,CM.book_no
+			,CM.author
+			,CM.publisher
+			,CM.reservation_date
+			,CM.reservation_expire_date
+			,C.status AS cabinet_status
+			,CM.status AS cabinet_module_status
+			,C.error
+			,C.cabinet_type
+		FROM
+			tbl_api_resvLoan_cabinet C 
+			LEFT OUTER JOIN tbl_api_resvLoan_cabinet_module CM ON CM.cabinet = C.cabinet AND CM.library_key = C.library_key AND CM.device_key = C.device_key
+			LEFT OUTER JOIN tbl_api_resvLoan_module M ON C.module = M.module_id AND C.library_key = CM.library_key
+			LEFT OUTER JOIN (
+				SELECT rec_key, cabinet_no, last_cabinet_no, direction,
+					CASE WHEN direction = 0 THEN '중앙' WHEN direction = 1 THEN '좌측' WHEN direction = 2 THEN '우측' END AS direction_nm,
+					ROW_NUMBER() OVER(PARTITION BY direction ORDER BY cabinet_no) AS row_num
+				FROM (
+					SELECT 
+						rec_key,
+						cabinet_no, 
+						(cabinet_no + column_cnt * row_cnt) - 1 AS last_cabinet_no, 
+						direction
+					FROM tbl_api_resvLoan_module
+				) a 
+			) DN ON DN.rec_key = M.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND C.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND C.device_key = #{device_key}
+			</if>
+		</where>
+		ORDER BY CM.cabinet, CM.insert_no, DN.row_num
+	</select>
+	
+	<!-- [조회] resvLoan.checkModuleDuplicated -->
+	<select id="checkModuleDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_api_resvLoan_module
+		<where>
+			module_id = #{module_id}
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] resvLoan.getResvLoanLastModule -->
+	<select id="getResvLoanLastModule" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			*
+		FROM
+			tbl_api_resvLoan_module
+		<where>
+			module_id = (SELECT MAX(module_id) FROM tbl_api_resvLoan_module)
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+</mapper>

@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="history">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] history.getLoanHistoryCount -->
+	<select id="getLoanHistoryCount" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_LIBRARY library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND device.model_key = 6
+			INNER JOIN
+			(
+				SELECT 
+					rec_key , library_key , device_key, book_key, member_key, book_no, book_title, book_isbn, user_id, user_name, loan_date, return_date 
+				FROM tbl_api_loan
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, book.title, book.isbn as book_isbn, log.user_id, log.user_name, log.loan_date, log.return_date 
+				FROM tbl_api_sls_use_log log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no AND log.library_key = book.library_key AND log.device_key = book.device_key
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND log.loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, log.title, isbn as book_isbn, log.user_no as user_id, log.user_name, log.loan_date, null AS return_date 
+				FROM tbl_api_sls_reservation log
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION 
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, book.title, book.isbn as book_isbn, log.user_id, log.user_name, log.loan_date, null AS return_date 
+				FROM tbl_api_sls_return log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no  AND log.library_key = book.library_key AND log.device_key = book.device_key
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND log.loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+			) loan ON library.rec_key = loan.library_key AND device.rec_key = loan.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND loan.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND loan.device_key = #{device_key}
+			</if>
+			<if test='book_title != "" and book_title != null'>
+				AND loan.book_title like '%' || #{book_title} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND loan.user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND loan.user_name like '%' || #{user_name} || '%'
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getLoanHistoryList -->
+	<select id="getLoanHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT loan.rec_key
+			,loan.library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']' AS library_nm
+			,loan.device_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비')|| '[' || COALESCE(device.device_id, '0000')|| ']' AS device_nm
+			,loan.book_key
+			,COALESCE(loan.book_title,'-') as book_title
+			,loan.user_id as member_no
+			,loan.member_key
+			,COALESCE(loan.user_name, '-') AS member_nm
+			,TO_CHAR(loan.loan_date, 'YYYY-MM-DD HH24:MI:SS') AS loan_date
+			,TO_CHAR(loan.return_date, 'YYYY-MM-DD HH24:MI:SS') AS return_date
+			,CASE WHEN return_date IS NULL AND return_plan_date IS NOT NULL AND return_plan_date <![CDATA[<]]> now() then '1' else '0' END as isOverdue
+		FROM
+		tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND device.model_key = 6
+			INNER JOIN
+			(
+				SELECT 
+					rec_key , library_key , device_key, book_key, member_key, book_no, book_title, book_isbn, user_id, user_name, loan_date, return_date, NULL AS return_plan_date
+				FROM tbl_api_loan
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION ALL
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, book.title, book.isbn as book_isbn, log.user_id, log.user_name, log.loan_date, log.return_date, log.return_plan_date 
+				FROM tbl_api_sls_use_log log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no AND log.library_key = book.library_key AND log.device_key = book.device_key AND book.book_status = '1'
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND log.loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION ALL
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, log.title, isbn as book_isbn, log.user_no as user_id, log.user_name, log.loan_date, null AS return_date, log.return_plan_date 
+				FROM tbl_api_sls_reservation log
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+				UNION ALL 
+				SELECT 
+					log.rec_key , log.library_key , log.device_key, NULL AS book_key, NULL AS member_key, log.book_no, book.title, book.isbn as book_isbn, log.user_id, log.user_name, log.loan_date, null AS return_date, log.return_plan_date 
+				FROM tbl_api_sls_return log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no  AND log.library_key = book.library_key AND log.device_key = book.device_key AND book.book_status = '1'
+				<where>
+					<if test='startDate != null and endDate != null'>
+						AND log.loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+					</if>
+				</where>
+			) loan ON library.rec_key = loan.library_key AND device.rec_key = loan.device_key
+	<where>
+		<if test='library_key != "" and library_key != null'>
+			AND loan.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND loan.device_key = #{device_key}
+		</if>
+		<if test='book_title != "" and book_title != null'>
+			AND loan.book_title like '%' || #{book_title} || '%'
+		</if>
+		<if test='user_id != "" and user_id != null'>
+			AND loan.user_id like '%' || #{user_id} || '%'
+		</if>
+		<if test='user_name != "" and user_name != null'>
+			AND loan.user_name like '%' || #{user_name} || '%'
+		</if>
+	</where>
+		ORDER BY loan.library_key, loan.device_key, loan_date DESC
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] history.getUnmannedReturnHistoryCount -->
+	<select id="getUnmannedReturnHistoryCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM TBL_API_SLS_RETURN return
+		<where>
+			<if test='startDate != null and endDate != null'>
+				AND return_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getUnmannedReturnHistoryList -->
+	<select id="getUnmannedReturnHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			return.rec_key
+			,return.library_key
+			,COALESCE(library.library_nm, '미등록 도서관') || '[' || COALESCE(library.library_id, '0000') || ']' AS library_nm
+			,return.device_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비') || '[' || COALESCE(device.device_id, '0000') || ']' AS device_nm
+			,TO_CHAR(return.return_date, 'YYYY-MM-DD HH24:MI:SS') AS return_date
+			,return.user_id
+			,return.user_name
+			,return.book_no
+			,return.title
+			,TO_CHAR(return.loan_date, 'YYYY-MM-DD') AS loan_date
+			,TO_CHAR(return.return_plan_date, 'YYYY-MM-DD') AS return_plan_date
+			,TO_CHAR(return.out_date, 'YYYY-MM-DD HH24:MI:SS') AS out_date
+			,return.state
+			,return.manage_code
+			,return.loc_code
+			,return.loc_name
+		FROM
+			tbl_api_sls_return return
+			INNER JOIN tbl_library library on return.library_key = library.rec_key
+			INNER JOIN tbl_device device on return.device_key = device.rec_key
+		<where>
+			<if test='startDate != null and endDate != null'>
+				AND return.return_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				AND return.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND return.device_key = #{device_key}
+			</if>
+		</where>
+		ORDER BY return.library_key, return.device_key, return.return_date desc
+	</select>
+	
+	<!-- [조회] history.getLoanReturnHistoryCount -->
+	<select id="getLoanReturnHistoryCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM TBL_API_LOANRETURN_USE_LOG log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='book_title != "" and book_title != null'>
+				AND book_title like '%' || #{book_title} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND log_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getLoanReturnHistoryList -->
+	<select id="getLoanReturnHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			log.rec_key
+			,log.library_key
+			,COALESCE(library.library_nm, '미등록 도서관')|| '[' || COALESCE(library.library_id, '0000')|| ']' AS library_nm
+			,log.device_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비')|| '[' || COALESCE(device.device_id, '0000')|| ']' AS device_nm
+			,COALESCE(log.book_title,'-') as book_title
+			,log.book_no
+			,log.book_author
+			,(CASE WHEN status = '0' THEN '대출'
+				   WHEN status = '1' THEN '반납' END) as 	status
+			,log.user_id
+			,COALESCE(log.user_name, '-') as user_name
+			,log.log_date
+			,loan_date
+			,return_date
+			,log.return_plan_date
+		FROM 
+			tbl_api_loanReturn_use_log log
+			LEFT OUTER JOIN tbl_library library ON log.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device ON log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND log.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+			<if test='book_title != "" and book_title != null'>
+				AND log.book_title like '%' || #{book_title} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND log.user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND log.user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND log.log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+		ORDER BY log.library_key, log.device_key, log.log_date DESC
+	</select>
+	
+	<!-- [조회] history.getReturnHistoryCount -->
+	<select id="getReturnHistoryCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM TBL_API_RETURN_USE_LOG log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_key = #{device_key}
+			</if>
+			<if test='book_no != "" and book_no != unll'>
+				AND book_no = #{book_no}
+			</if>
+			<if test='book_name != "" and book_name != null'>
+				AND book_name = #{book_name}
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND TO_DATE(book_state_date, 'YYYYMMDD') BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getReturnHistoryList -->
+	<select id="getReturnHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			log.rec_key
+			,log.library_key
+			,COALESCE(library.library_nm, '미등록 도서관') || '[' || COALESCE(library.library_id, '0000') || ']' AS library_nm
+			,log.device_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비') || '[' || COALESCE(device.device_id, '0000') || ']' AS device_nm
+			,log.book_no
+			,log.book_name
+			,id_no
+			,st_name
+			,book_loan_date
+			,book_return_date
+			,TO_CHAR(TO_DATE(book_state_date, 'YYYYMMDD'), 'YYYY-MM-DD') as book_state_date
+		FROM
+			tbl_api_return_use_log log
+			LEFT OUTER JOIN tbl_library library ON log.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device ON log.device_key = device.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND log.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+			<if test='book_no != "" and book_no != unll'>
+				AND log.book_no = #{book_no}
+			</if>
+			<if test='book_name != "" and book_name != null'>
+				AND log.book_name = #{book_name}
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND TO_DATE(book_state_date, 'YYYYMMDD') BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getResvLoanHistoryCount -->
+	<select id="getResvLoanHistoryCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_api_resvLoan_use_log resvLoan 
+			LEFT OUTER JOIN tbl_library library on resvLoan.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device on resvLoan.device_key = device.rec_key
+		<where>
+			status = 'L'
+			<if test='library_key != "" and library_key != null'>
+				AND resvLoan.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				ADN resvLoan.device_key = #{device_key}
+			</if>
+			<if test='title != "" and title != null'>
+				 AND title like '%' || #{title} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] history.getResvLoanHistoryList -->
+	<select id="getResvLoanHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			resvLoan.rec_key
+			,resvLoan.library_key
+			,COALESCE(library.library_nm, '미등록 도서관') || '[' || COALESCE(library.library_id, '0000') || ']' AS library_nm
+			,resvLoan.device_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비') || '[' || COALESCE(device.device_id, '0000') || ']' AS device_nm
+			,resvLoan.book_no
+			,resvLoan.title
+			,resvLoan.user_id
+			,resvLoan.user_name
+			,TO_CHAR(resvLoan.insert_date, 'YYYY-MM-DD HH24:MI:SS') AS insert_date
+			,TO_CHAR(resvLoan.reservation_date, 'YYYY-MM-DD HH24:MI:SS') AS reservation_date
+			,TO_CHAR(resvLoan.loan_date, 'YYYY-MM-DD HH24:MI:SS') AS loan_date
+			,TO_CHAR(resvLoan.reservation_expire_date, 'YYYY-MM-DD HH24:MI:SS') AS reservation_expire_date
+			,status
+		FROM
+			tbl_api_resvLoan_use_log resvLoan 
+			LEFT OUTER JOIN tbl_library library on resvLoan.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device on resvLoan.device_key = device.rec_key
+		<where>
+			status = 'L'
+			<if test='library_key != "" and library_key != null'>
+				AND resvLoan.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				ADN resvLoan.device_key = #{device_key}
+			</if>
+			<if test='title != "" and title != null'>
+				 AND title like '%' || #{title} || '%'
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id like '%' || #{user_id} || '%'
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND user_name like '%' || #{user_name} || '%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND loan_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+		ORDER BY resvLoan.library_key, resvLoan.device_key, resvLoan.loan_date DESC
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx * ${pageSize}}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] history.getGateHistoryCount -->
+	<select id="getGateHistoryCount" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM tbl_api_gate_use_log gate
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device_id = #{device_key}
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND user_id = #{user_id}
+			</if>
+			<if test='user_nm != "" and user_nm != null'>
+				AND user_nm = #{user_nm}
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND log_time BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') and TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] history.getGateHistoryList -->
+	<select id="getGateHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			gate.library_key
+			,library.library_id
+			,COALESCE(library.library_nm, '미등록 도서관') || '[' || COALESCE(library.library_id, '0000') || ']' AS library_nm
+			,device.rec_key
+			,device.device_id
+			,COALESCE(device.device_nm, '미등록 장비') || '[' || COALESCE(device.device_id, '0000') || ']' AS device_nm
+			,member.user_nm
+			,gate.user_id
+			,COALESCE(dept.dept_nm, '') as dept_nm
+			,position.position_nm
+			,(CASE WHEN gate.log_type = 'I' THEN '입실'
+				   WHEN gate.log_type = 'O' THEN '퇴실'
+			 ELSE gate.log_type END) AS log_type
+			,TO_CHAR(gate.LOG_TIME, 'YYYY-MM-DD HH24:MI:SS') AS LOG_TIME
+		FROM tbl_api_gate_use_log gate
+			LEFT OUTER JOIN tbl_library library ON gate.library_key = library.rec_key
+			LEFT OUTER JOIN tbl_device device ON gate.device_id = device.device_id
+			LEFT OUTER JOIN tbl_api_gate_dept_code dept ON gate.dept_code = dept.dept_code AND gate.library_key = dept.library_key
+			LEFT OUTER JOIN tbl_api_gate_position_code position ON gate.user_position = position.position_code AND gate.library_key = position.library_key
+			LEFT OUTER JOIN tbl_api_member member ON gate.user_id = member.user_id AND gate.library_key = member.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND gate.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND gate.log_time between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+			<if test='log_type != "" and log_type != null'>
+				AND gate.log_type = #{log_type}
+			</if>
+		</where>
+		ORDER BY gate.log_time DESC
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<select id="getAntiLostHistoryCount" resultType="int">
+		SELECT COUNT(*)
+		FROM TBL_API_ANTILOST_BOOK
+		<where>
+			<if test="library_key != null and library_key != ''">
+				AND library_key = #{library_key}
+			</if>
+			<if test="device_id != null and device_id != ''">
+				AND device_id = #{device_id}
+			</if>
+			<if test="book_no != null and book_no != ''">
+				AND book_no LIKE '%'||#{book_no}||'%'
+			</if>
+			<if test="book_title != null and book_title != ''">
+				AND book_title LIKE '%'||#{book_title}||'%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+	</select>
+	<select id="getAntiLostHistoryList" resultType="java.util.LinkedHashMap">
+		SELECT
+			anti.rec_key
+			,library.library_id
+			,COALESCE(library.library_nm, '미등록 도서관') || '[' || COALESCE(library.library_id, '0000') || ']' AS library_nm
+			,device.rec_key AS device_key
+			,anti.device_id AS device_id
+			,COALESCE(device.device_nm, '미등록 장비') || '[' || COALESCE(anti.device_id, '0000') || ']' AS device_nm
+			,TO_CHAR(anti.log_date, 'YYYY-MM-DD HH24:MI:SS') AS log_date
+			,anti.book_no
+			,anti.book_title
+		FROM TBL_API_ANTILOST_BOOK anti
+		LEFT OUTER JOIN tbl_library library ON anti.library_key = library.rec_key
+		LEFT OUTER JOIN tbl_device device ON anti.device_id = device.device_id
+		<where>
+			<if test="library_key != null and library_key != ''">
+				AND anti.library_key = #{library_key}
+			</if>
+			<if test="device_id != null and device_id != ''">
+				AND anti.device_id = #{device_id}
+			</if>
+			<if test="book_no != null and book_no != ''">
+				AND book_no LIKE '%'||#{book_no}||'%'
+			</if>
+			<if test="book_title != null and book_title != ''">
+				AND book_title LIKE '%'||#{book_title}||'%'
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND anti.log_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+		</where>
+		<choose>
+			<when test="sort_field != null">
+				ORDER BY ${sort_field} ${sort_dir}
+			</when>
+			<otherwise>
+				ORDER BY log_date DESC
+			</otherwise>
+		</choose>
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+</mapper>

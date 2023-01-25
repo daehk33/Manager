@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="smart">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<select id="getSLSBookInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			id
+			,state
+			,equip_id
+			,tray
+			,slot
+			,book_key
+			,book_no
+			,isbn
+			,rfid
+			,insert_date
+			,loan_date
+			,return_date
+			,return_plan_date
+			,user_key
+			,class_no
+			,book_code
+			,vol_code
+			,copy_code
+			,user_no
+			,title
+			,author
+			,publisher
+			,info
+			,reserve_date
+			,image
+			,reserve_expire_date
+			,pub_date
+			,loc_type
+			,manage_code
+			,drum
+			,first_work
+			,last_work
+		FROM sls_book_list_tbl 
+	</select>
+	
+	<select id="getEquipmentBookInner" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			 B.ID
+			,B.EQUIP_ID
+			,B.BOOK_NO
+			,B.ISBN
+			,B.TITLE
+			,B.AUTHOR
+			,B.PUBLISHER
+			,B.RFID
+			,B.CLASS_NO
+			,COALESCE(C.LOAN_COUNT, 0)						AS LOAN_COUNT
+			,TO_CHAR(B.INSERT_DATE	,'YYYY-MM-DD')			AS INSERT_DATE
+			,B.STATE
+			,NICOM_GET_CODE_NAME('COMMON.STATE'	,B.STATE)		AS STATE_NM
+			,TO_CHAR(B.LOAN_DATE			,'YYYY-MM-DD')		AS LOAN_DATE
+			,TO_CHAR(B.RESERVE_DATE			,'YYYY-MM-DD')		AS RESERVE_DATE
+			,NICOM_GET_DATE_FORMAT('YMD HMS',TO_CHAR(RESERVE_EXPIRE_DATE ,'YYYYMMDDHH24MISS'))		AS RESERVE_EXPIRE_DATE
+			,TO_CHAR(B.RETURN_PLAN_DATE		,'YYYY-MM-DD')		AS RETURN_PLAN_DATE
+			,B.DRUM AS BOOK_SAVE_TYPE
+			,B.SLOT AS BOOK_SAVE_ROW
+			,B.TRAY AS BOOK_SAVE_COLUMN
+			,B.LOC_TYPE
+			,COALESCE(
+				NICOM_GET_CODE_NAME('COMMON.BOOK_SAVE_TYPE'	,B.DRUM)
+				||'-'||B.SLOT
+				||'-'||B.TRAY
+				,'')				AS BOOK_SAVE_NM
+			,(	SELECT	COALESCE( FLOOR( SUM(POINT)/ COUNT(*) ) ,0 )
+				FROM	SLS_USE_LOG_TBL D
+				WHERE	D.BOOK_NO	= B.BOOK_NO
+				AND		D.POINT		IS NOT NULL
+			 )		AS BOOK_POINT_AVG
+		FROM	SLS_BOOK_LIST_TBL B
+				LEFT JOIN (SELECT	 BOOK_NO
+									,COUNT(*) AS LOAN_COUNT
+							FROM	SLS_USE_LOG_TBL
+							GROUP BY	BOOK_NO) C
+					ON B.BOOK_NO = C.BOOK_NO
+		WHERE	B.BOOK_NO	IS NOT NULL
+	</select>
+
+	<select id="getSLSCasInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			no
+			,tray
+			,slot
+			,book_no
+			,rfid
+			,usage
+			,cas_type
+			,update_date
+			,drum
+			,book_type
+			,equip_id
+			,exist_yn
+			,proc_yn
+			,enable_yn
+		FROM sls_cas_list_tbl 
+		ORDER BY drum, tray, slot::int
+	</select>
+	
+	<!-- [수정] smart.updateSLSCasInfo -->
+	<update id="updateSLSCasInfo" parameterType="map">
+		UPDATE sls_cas_list_tbl
+		   SET
+			enable_yn = #{enable_yn}
+			,update_date = now()
+		WHERE
+			no = #{no}
+	</update>
+	
+	<select id="getSLSRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			id
+			,value_name
+			,description
+			,opt01
+			,opt02
+			,opt03
+			,opt04
+			,enable
+			,update_date
+			,worker
+		FROM sls_rule_tbl
+		ORDER BY id
+	</select>
+
+	<!-- [수정] smart.updateSLSRuleInfo  -->
+	<update id="updateSLSRuleInfo" parameterType="map">
+		UPDATE sls_rule_tbl
+		   SET
+			opt01 = #{opt01}
+			,opt02 = #{opt02}
+			,opt03 = #{opt03}
+			,opt04 = #{opt04}
+			,update_date = now()
+			,worker = #{worker}
+		WHERE
+			id = #{id}
+	</update>
+		
+	<select id="getSLSReservationInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			id
+			,user_no
+			,user_name
+			,book_no
+			,status
+			,title
+			,author
+			,publisher
+			,vol_code
+			,call_no
+			,location_no
+			,location_name
+			,reserve_date
+			,reserve_expire_date
+			,isbn
+			,rfid
+			,mobile
+			,equip_id
+			,loan_date
+			,return_plan_date
+			,loan_success
+			,first_work
+			,last_work
+			,manage_code
+			,lib_name
+		FROM
+		    sls_lib_reservation_tbl
+		<where>
+			<if test="interval != null">
+				loan_date > now() - '1 day'::interval*#{interval} 
+			</if>
+		</where>
+	</select>
+
+	<select id="getSLSReturnInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+		    id
+		    ,log_date
+		    ,log_time
+		    ,user_id
+		    ,user_name
+		    ,book_no
+		    ,state
+		    ,loan_date
+		    ,return_plan_date
+		    ,return_success
+		    ,rfid
+		    ,title
+		    ,return_date
+		    ,out_date
+		    ,author
+		    ,publisher
+		    ,manage_code
+		    ,loc_code
+		    ,loc_name
+		FROM
+		    sls_return_log_tbl
+		<where>
+			<if test="interval != null">
+				log_date > to_char(now() - '1 day'::interval*#{interval},'YYYYMMDD')
+			</if>
+		</where>
+	</select>
+
+	<select id="getSLSUseLogInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+		    id
+		    ,log_date
+		    ,log_time
+		    ,user_id
+		    ,user_name
+		    ,book_no
+		    ,state
+		    ,loan_date
+		    ,return_plan_date
+		    ,return_date
+		    ,loan_success
+		    ,return_success
+		    ,phone_number
+		    ,point
+		    ,loan_equip_id
+		    ,return_equip_id
+		    ,class_name
+		    ,gender
+		FROM
+		    sls_use_log_tbl
+		<where>
+			<if test="interval != null">
+				log_date > to_char(now() - '1 day'::interval*#{interval},'YYYYMMDD')
+			</if>
+		</where>
+	</select>
+
+	<!-- [조회] smart.getSLSStatusInfoList  -->
+	<select id="getSLSStatusInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			COALESCE(status_info,'') AS status_info
+		  FROM system_info_tbl
+		WHERE
+			id = '001' /*기본값*/
+	</select>
+
+	<!-- [수정] smart.updateDeviceStatus  -->
+	<update id="updateDeviceStatus" parameterType="map">
+		UPDATE system_info_tbl
+		   SET
+			status_info = #{status_info}
+		WHERE
+			id = '001' /*기본값*/
+	</update>
+	
+	<!-- [조회] smart.getSLSDrumRuleInfoList -->
+	<select id="getSLSDrumRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			no
+			,posi
+			,step
+			,use
+			,volume
+			,grade
+			,last_work
+			,error_msg
+			,use_smartlib
+			,use_reserve
+			,use_other_loc_return
+			,use_other_lib_return
+		FROM sls_step_tbl
+	</select>
+	
+	<!-- [수정] smart.updateSLSDrumRuleInfo  -->
+	<update id="updateSLSDrumRuleInfo" parameterType="map">
+		UPDATE sls_step_tbl
+		   SET
+			use = #{use}
+			,volume = #{volume}
+			,grade = #{grade}
+			,last_work = #{last_work}
+			,error_msg = #{error_msg}
+			,use_smartlib = #{use_smartlib}
+			,use_reserve = #{use_reserve}
+			,use_other_loc_return = #{use_other_loc_return}
+			,use_other_lib_return = #{use_other_lib_return}
+		WHERE
+			no = #{no}
+	</update>
+	
+	<!-- [조회] smart.getSLSSlotInfoList -->
+	<select id="getSLSSlotInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			no
+			,drum
+			,tray
+			,slot
+			,usage
+			,enable_yn
+		FROM sls_cas_list_tbl
+		ORDER BY drum, tray, slot::int
+	</select>
+	
+	<!-- [조회] smart.getSLSBookOutInfoList -->
+	<select id="getSLSBookOutInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			id
+			,book_key
+			,rfid
+			,book_no
+			,add_date
+			,out_date
+			,cancel_date
+			,status
+		FROM
+			sls_book_out_tbl
+		<where>
+			<if test='rfid != "" and rfid != null'>
+				AND rfid = #{rfid} 
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				AND book_no = #{book_no}
+			</if>
+			<if test='add_date != "" and add_date != null'>
+				AND add_date = #{add_date}::timestamp
+			</if>
+		</where>
+	</select> 
+	
+	<!-- [추가] smart.insertSLSBookOutInfo -->
+	<insert id="insertSLSBookOutInfo" parameterType="map">
+		INSERT INTO sls_book_out_tbl(
+			book_key
+			,rfid
+			,book_no
+			,add_date
+			,status
+		) VALUES(
+			#{book_key}
+			,#{rfid}
+			,#{book_no}
+			,#{add_date}::timestamp
+			,#{status}
+		)
+	</insert>
+	
+	<!-- [수정] smart.updateSLSBookOutInfo -->
+	<update id="updateSLSBookOutInfo" parameterType="map">
+		UPDATE sls_book_out_tbl
+		   SET
+			<if test='rfid != "" and rfid != null'>
+				rfid = #{rfid}
+			</if>
+			<if test='book_no != "" and book_no != null'>
+				,book_no = #{book_no}
+			</if>
+			<if test='status == 2'>
+				,cancel_date = now();
+			</if>
+			<if test='status != "" and status != null'>
+				,status = #{status}
+			</if>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+	
+	<!-- [삭제] smart.deleteSLSBookOutInfo -->
+	<delete id="deleteSLSBookOutInfo" parameterType="map">
+		DELETE FROM sls_book_out_tbl
+		<where>
+			id = #{id}
+		</where>
+	</delete>
+	
+	<!-- [수정] smart.updateBookOutWorkStatus -->
+	<update id="updateBookOutWorkStatus" parameterType="map">
+		UPDATE system_info_tbl
+		   SET
+			book_out_work_status = #{book_out_work_status}
+	</update>
+	
+</mapper>

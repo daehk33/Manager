@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="libraryMember">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] libraryMember.getLibMemberCount  -->
+	<select id="getLibMemberCount" parameterType="map" resultType="int">
+		SELECT 
+			COUNT(*) AS count
+		FROM 
+			tbl_api_member
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='member_no != "" and member_no != null'>
+			AND member_no LIKE '%'||#{member_no}||'%'
+		</if>
+		<if test='member_id != "" and member_id != null'>
+			AND member_id LIKE '%'||#{member_id}||'%'
+		</if>
+		<if test='member_nm != "" and member_nm != null'>
+			AND member_nm LIKE '%'||#{member_nm}||'%'
+		</if>
+		</where>
+	</select>
+	<!-- [조회] libraryMember.getLibMemberInfo  -->
+	<select id="getLibMemberInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,library_key
+			,member_no
+			,member_nm
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_api_member
+		<where>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='lib_member_key != null'>
+			AND lib_member_key = #{lib_member_key}
+		</if>
+		<if test='member_id != null and member_id != ""' >
+			AND member_id  = #{member_id}
+		</if>
+		<if test='member_no != null and member_no != ""'>
+			AND member_no = #{member_no}
+		</if>
+		<if test='(member_id == null or member_id == "") and (member_no == null or member_no == "")'>
+			AND 1=2
+		</if>
+		</where>
+		LIMIT 1 
+	</select>
+	<!-- [조회] libraryMember.getLibMemberList  -->
+	<select id="getLibMemberList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			u.rec_key
+			,u.library_key
+			,l.library_nm || '[' || l.library_id || ']' AS library_nm
+			,u.device_key
+			,u.member_no
+			,u.member_id
+			,u.member_nm
+			,u.create_user
+			,u.edit_user
+			,fn_code_value('G0006', user_class) AS user_class
+			,fn_code_value('G0007', member_class) AS member_class
+			,TO_CHAR(u.reg_date, 'YYYY-MM-DD') AS reg_date
+			,TO_CHAR(u.edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(u.create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_api_member u
+			LEFT OUTER JOIN tbl_library l on u.library_key = l.rec_key
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='member_no != "" and member_no != null'>
+			AND member_no LIKE '%'||#{member_no}||'%'
+		</if>
+		<if test='member_id != "" and member_id != null'>
+			AND member_id LIKE '%'||#{member_id}||'%'
+		</if>
+		<if test='member_nm != "" and member_nm != null'>
+			AND member_nm LIKE '%'||#{member_nm}||'%'
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	<!-- [등록] libraryMember.insertLibMemberInfo  -->
+	<insert id="insertLibMemberInfo" parameterType="map">
+		INSERT INTO tbl_api_member(
+			library_key
+			,device_key
+			,lib_member_key
+			,member_no
+			,member_id
+			,member_nm
+			,user_class
+			,member_class
+			,reg_date
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date	
+		)
+		VALUES (
+			#{library_key}
+			,#{device_key}
+			,#{lib_member_key}
+			,#{member_no}
+			,#{member_id}
+			,#{member_nm}
+			,#{user_class}
+			,#{member_class}
+			,CASE WHEN #{reg_date}='' THEN NULL ELSE #{reg_date}::timestamp END
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	
+	</insert>
+	<!-- [삭제] libraryMember.deleteLibMemberInfo  -->
+	<delete id="deleteLibMemberInfo" parameterType="map">
+		DELETE FROM tbl_api_member
+		WHERE rec_key = #{rec_key}
+	</delete>
+	<!-- [수정] libraryMember.updateLibMemberInfo  -->
+	<update id="updateLibMemberInfo" parameterType="map">
+		UPDATE tbl_api_member
+		SET
+			library_key		= #{library_key}
+			,device_key		= #{device_key}
+			,lib_member_key = #{lib_member_key}
+			,member_no		= #{member_no}
+			,member_id		= #{member_id}
+			,member_nm		= #{member_nm}
+			,user_class		= #{user_class}
+			,member_class	= #{member_class}
+			,reg_date		= CASE WHEN #{reg_date}='' THEN NULL ELSE #{reg_date}::timestamp END
+			,edit_user		= #{worker}
+			,edit_date		= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+</mapper>

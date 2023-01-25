@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kolas">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<select id="getApiLibMemberList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			 REC_KEY
+			,USER_NO
+			,USER_ID
+			,NAME
+			,USER_CLASS
+			,MEMBER_CLASS
+			,REG_DATE
+		FROM CO_LOAN_USER_TBL
+		WHERE
+			(USER_NO IS NOT NULL OR USER_ID IS NOT NULL)
+			AND REMOVE_DATE IS NULL
+	</select>
+	
+	<select id="getBookList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			* 
+		FROM IDX_BO_TBL 
+		WHERE FORM_CODE = 'BK' 
+			AND ST_CODE IS NOT NULL 
+			AND DELETE_DATE  IS NULL
+			AND IDX_HOLD_PLACE = '001' 
+	</select>
+</mapper>

@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="sls">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] sls.getSLSSlotCount -->
+	<select id="getSLSSlotCount" parameterType="map" resultType="int">
+		SELECT 
+			COUNT(*) as count
+		FROM
+			tbl_api_sls_cas_list T1
+			LEFT OUTER JOIN tbl_api_sls_book T2 ON T1.book_no = T2.book_no AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND T1.library_key = #{library_key}
+			</if>
+			<if test='drumTray != "" and drumTray != null'>
+				AND T1.drum||'-'||T1.tray = #{drumTray}
+			</if>
+			<if test='slot != "" and slot != null'>
+				AND T1.slot = #{slot}
+			</if>
+			<if test='title != "" and title != null'>
+				AND T2.title like '%'||#{title}||'%'
+			</if>
+			<if test='author != "" and author != null'>
+				AND T2.author like '%'||#{author}||'%'
+			</if>
+			<if test='publisher != "" and publisher != null'>
+				AND T2.publisher like '%'||#{publisher}||'%'
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "1"'>
+				AND T1.book_no != ''
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "2"'>
+				AND (T1.book_no is null OR length(T1.book_no) = 0)
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] sls.getSLSSlotList -->
+	<select id="getSLSSlotList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,fn_library_nm(T1.library_key) as library_nm
+			,fn_device_nm(T1.device_key) as device_nm
+			,T1.drum
+			,T1.tray
+			,T1.slot
+			,((CASE WHEN T1.drum = '1' THEN '전면' ELSE '후면' END) || ' - ' || T1.tray) AS drumtray
+			,T1.book_no
+			,T2.title
+			,T2.author
+			,T2.publisher
+		FROM
+			tbl_api_sls_cas_list T1
+			LEFT OUTER JOIN tbl_api_sls_book T2 ON T1.book_no = T2.book_no AND T1.library_key = T2.library_key AND T1.device_key = T2.device_key
+			INNER JOIN tbl_device T3 on T1.device_key = T3.rec_key 
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND T1.library_key = #{library_key}
+			</if>
+			<if test='drumTray != "" and drumTray != null'>
+				AND T1.drum||'-'||T1.tray = #{drumTray}
+			</if>
+			<if test='slot != "" and slot != null'>
+				AND T1.slot = #{slot}
+			</if>
+			<if test='title != "" and title != null'>
+				AND T2.title like '%'||#{title}||'%'
+			</if>
+			<if test='author != "" and author != null'>
+				AND T2.author like '%'||#{author}||'%'
+			</if>
+			<if test='publisher != "" and publisher != null'>
+				AND T2.publisher like '%'||#{publisher}||'%'
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "1"'>
+				AND T1.book_no != ''
+			</if>
+			<if test='withEmptySlot != "" and withEmptySlot != null and withEmptySlot == "2"'>
+				AND (T1.book_no is null OR length(T1.book_no) = 0)
+			</if>
+		</where>
+		ORDER BY T1.library_key, T1.device_key,  T1.drum, T1.tray, T1.slot::integer
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] sls.getSLSDrumTrayList -->
+	<select id="getSLSDrumTrayList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT DISTINCT ON(drum, tray) 
+			(CASE WHEN drum = '1' THEN '전면' ELSE '후면' END) || ' - ' || tray as name
+			,drum || '-' || tray as value
+		FROM 
+			tbl_api_sls_cas_list
+		ORDER BY drum, tray
+	</select>
+  
+	<!-- [조회] sls.getSLSBookRankListCnt -->
+	<select id="getSLSBookRankListCnt" parameterType="map" resultType="int">
+		SELECT 
+			COUNT(*) AS count 
+		FROM (
+			SELECT
+				fn_library_nm(library.rec_key) as library_nm,
+				book_no,
+				title,
+				author
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6
+				INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+			WHERE
+				loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>
+					AND device.rec_key = #{device_key}
+				</if>
+			GROUP BY library.rec_key, book_no, title, author
+		) a 
+	</select>
+	
+	<!-- [조회] sls.getSLSBookRankList -->
+	<select id="getSLSBookRankList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY count(*) desc) AS rownum,
+			fn_library_nm(library.rec_key) as library_nm,
+			book_no,
+			title,
+			author,
+			count(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND model_key = 6
+			INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+		WHERE
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		GROUP BY library.rec_key , book_no, title, author
+		ORDER BY cnt DESC
+		<if test='limit != "" and limit != null'>
+			LIMIT #{limit}
+		</if>
+	</select>
+
+	<!-- [조회] sls.getSLSUserRankListCnt -->
+	<select id="getSLSUserRankListCnt" parameterType="map" resultType="int">
+		SELECT 
+			COUNT(*) AS count 
+		FROM (
+			SELECT
+				fn_library_nm(library.rec_key) as library_nm,
+				log.user_id,
+				log.user_name,
+				TO_CHAR(recent_log.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+				count(*) AS cnt
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON device.library_key = library.rec_key
+				INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+				LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_sls_use_log group by user_id ) recent_log on log.user_id = recent_log.user_id
+			WHERE
+				loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND log.library_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>
+					AND log.device_key = #{device_key}
+				</if>
+				<if test='user_id != "" and user_id != null'>
+					AND log.user_id = #{user_id}
+				</if>
+				<if test='user_name != "" and user_name != null'>
+					AND log.user_name like '%' || #{user_name} || '%'
+				</if>
+			GROUP BY library.rec_key, log.user_id, user_name, recent_date
+		) a 
+	</select>
+		
+	<!-- [조회] sls.getSLSUserRankList -->
+	<select id="getSLSUserRankList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY count(*) desc) AS rownum ,
+			fn_library_nm(library.rec_key) as library_nm,
+			log.user_id,
+			log.user_name,
+			TO_CHAR(recent_log.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+			count(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+			LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_sls_use_log group by user_id ) recent_log on log.user_id = recent_log.user_id
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND log.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND log.user_id = #{user_id}
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND log.user_name like '%' || #{user_name} || '%'
+			</if>
+		</where>
+		GROUP BY library.rec_key, log.user_id, user_name, recent_date
+		ORDER BY cnt DESC
+		<if test='limit != "" and limit != null'>
+			LIMIT #{limit}
+		</if>
+	</select>
+	
+	<!-- [조회] sls.getSLSUserRankListByLocationCnt -->
+	<select id="getSLSUserRankListByLocationCnt" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM
+		(
+			SELECT
+				fn_library_nm(library.rec_key) as library_nm,
+				device.device_location,
+				log.user_id,
+				log.user_name,
+				TO_CHAR(recent_log.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+				COUNT(log.loan_date) as loan_cnt,
+				COUNT(log.return_date) as return_cnt,
+				count(*) AS cnt
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON device.library_key = library.rec_key
+				INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+				LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_sls_use_log group by user_id ) recent_log on log.user_id = recent_log.user_id
+			<where>
+				loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND log.library_key = #{library_key}
+				</if>
+				<if test='device_key != "" and device_key != null'>
+					AND log.device_key = #{device_key}
+				</if>
+				<if test='user_id != "" and user_id != null'>
+					AND log.user_id = #{user_id}
+				</if>
+				<if test='user_name != "" and user_name != null'>
+					AND log.user_name like '%' || #{user_name} || '%'
+				</if>
+			</where>
+			GROUP BY library.rec_key, device.device_location, log.user_id, user_name, recent_date
+			ORDER BY cnt DESC
+		) a
+	</select>
+	
+	<!-- [조회] sls.getSLSUserRankListByLocation -->
+	<select id="getSLSUserRankListByLocation" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			ROW_NUMBER() OVER(ORDER BY count(*) desc) AS rownum ,
+			fn_library_nm(library.rec_key) as library_nm,
+			device.device_location,
+			log.user_id,
+			log.user_name,
+			TO_CHAR(recent_log.recent_date, 'YYYY-MM-DD') AS recent_loan_date,
+			COUNT(log.loan_date) as loan_cnt,
+			COUNT(log.return_date) as return_cnt,
+			count(*) AS cnt
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+			LEFT OUTER JOIN ( SELECT user_id, max(loan_date) as recent_date from view_sls_use_log group by user_id ) recent_log on log.user_id = recent_log.user_id
+		<where>
+			loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND log.library_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND log.device_key = #{device_key}
+			</if>
+			<if test='user_id != "" and user_id != null'>
+				AND log.user_id = #{user_id}
+			</if>
+			<if test='user_name != "" and user_name != null'>
+				AND log.user_name like '%' || #{user_name} || '%'
+			</if>
+		</where>
+		GROUP BY library.rec_key, device.device_location, log.user_id, user_name, recent_date
+		ORDER BY cnt DESC
+	</select>
+	
+	<select id="getSLSUserLoanCount" parameterType="map"  resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+		WHERE user_id = #{user_id}
+			AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+	</select>
+	<select id="getSLSUserLoanList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			book_no
+			,title
+			,TO_CHAR(loan_date, 'YYYY-MM-DD') AS loan_date
+			,TO_CHAR(return_date, 'YYYY-MM-DD') AS return_date
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key
+			INNER JOIN view_sls_use_log log ON log.library_key = library.rec_key AND log.device_key = device.rec_key
+		WHERE user_id = #{user_id}
+			AND loan_date BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		ORDER BY loan_date
+	</select>
+	
+	<select id="getSLSOverdueListCount" parameterType="map"  resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND device.model_key = 6
+			INNER JOIN
+			(
+				SELECT log.rec_key, log.library_key, log.device_key, book.book_key, book.title, log.user_name, log.user_id, log.loan_date, log.return_plan_date, log.return_date
+				FROM tbl_api_sls_use_log log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no AND log.library_key = book.library_key AND log.device_key = book.device_key AND book.book_status = '1'
+			) log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+		<where>
+			log.return_date IS NULL
+			AND log.return_plan_date IS NOT NULL
+			AND log.return_plan_date <![CDATA[<]]> now()
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getSLSOverdueList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			log.rec_key
+			,log.library_key
+			,library.library_nm
+			,log.device_key
+			,device.device_id
+			,device.device_nm
+			,log.book_key
+			,log.book_no
+			,log.title
+			,log.author
+			,log.user_id
+			,log.user_name
+			,TO_CHAR(log.loan_date, 'YYYY-MM-DD') AS loan_date
+			,TO_CHAR(log.return_plan_date, 'YYYY-MM-DD') AS return_plan_date
+			,now()::date - return_plan_date::date as overdue_date
+		FROM
+			tbl_library library
+			INNER JOIN tbl_device device ON device.library_key = library.rec_key AND device.model_key = 6
+			INNER JOIN
+			(
+				SELECT log.rec_key, log.library_key, log.device_key, book.book_key, book.book_no, book.title, book.author, log.user_name, log.user_id, log.loan_date, log.return_plan_date, log.return_date
+				FROM tbl_api_sls_use_log log LEFT OUTER JOIN tbl_api_sls_book book ON log.book_no = book.book_no AND log.library_key = book.library_key AND log.device_key = book.device_key AND book.book_status = '1'
+			) log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+		<where>
+			log.return_date IS NULL
+			AND log.return_plan_date IS NOT NULL
+			AND log.return_plan_date <![CDATA[<]]> now()
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+	</select>
+	
+</mapper>

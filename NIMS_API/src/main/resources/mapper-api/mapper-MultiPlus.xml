@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="multiplus">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] multiplus.getLoanReturnUseLogInfoList -->
+	<select id="getLoanReturnUseLogInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key as log_key
+			,log_date
+			,book_title
+			,book_no
+			,book_author
+			,book_place_name
+			,book_isbn
+			,status
+			,user_name
+			,user_id
+			,user_class
+			,user_grade
+			,loan_date
+			,return_date
+			,return_plan_date
+			,device_id
+		FROM
+			use_log_tbl
+		<where>
+			<if test='log_key != "" and log_key != null'>
+				<![CDATA[rec_key > #{log_key}]]>
+			</if>
+		</where>
+		ORDER BY rec_key
+	</select>
+	
+	<!-- [조회] multiplus.getLoanReturnRuleInfoList -->
+	<select id="getLoanReturnRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			code
+			,description
+			,value_name
+			,value1
+			,value2
+			,value3
+			,value5
+			,equip_id
+			,update_date
+			,worker
+			,enable
+			,value_type
+			<if test='model_key == 1'>
+				,editable
+			</if>
+		FROM
+			env_tbl
+		ORDER BY code::numeric
+	</select>
+	
+	<!-- [수정] multiplus.updateLoanReturnRuleInfo -->
+	<update id="updateLoanReturnRuleInfo" parameterType="map">
+		UPDATE env_tbl
+		   SET
+			value1 = #{value1}
+			,value2 = #{value2}
+			,value3 = #{value3}
+			,value5 = #{value5}
+		WHERE
+			code = #{code}
+	</update>
+	
+	<!-- [조회] multiplus.getLoanReturnRuleInfoList2 -->
+	<select id="getLoanReturnRuleInfoList2" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rule_id AS code
+			,remark AS description
+			,rule_name AS value_name
+			,opt01 AS value1
+			,opt02 AS value2
+			,opt03 AS value3
+			,opt04 AS value5
+			,update_date
+			,worker
+		FROM
+			rule_tbl
+		WHERE
+			enable = '1'
+		ORDER BY rule_id::numeric
+	</select>
+	
+	<!-- [수정] multiplus.updateLoanReturnRuleInfo2 -->
+	<update id="updateLoanReturnRuleInfo2" parameterType="map">
+		UPDATE rule_tbl
+		   SET
+			opt01 = #{value1}
+			,opt02 = #{value2}
+			,opt03 = #{value3}
+			,opt04 = #{value5}
+		WHERE 
+			rule_id = #{code}
+	</update>
+	
+	<!-- [수정] multiplus.updateLoanReturnBannerChanged -->
+	<update id="updateLoanReturnBannerChanged" parameterType="map">
+		UPDATE lib_info_tbl
+		   SET
+			banner_changed = #{banner_changed}
+	</update>
+	
+	<!-- [조회] multiplus.getLoanReturnHolidayList -->
+	<select id="getLoanReturnHolidayList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key,
+			year,
+			month,
+			days,
+			create_date,
+			edit_date
+		FROM
+			holiday_tbl
+	</select>
+	
+	<!-- [조회] multiplus.getLoanReturnHolidayInfo -->
+	<select id="getLoanReturnHolidayInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,year
+			,month
+			,days
+		FROM
+			holiday_tbl
+		<where>
+			<if test='year != "" and year != null'>
+				AND year = #{year}
+			</if>
+			<if test='month != "" and month != null'>
+				AND month = #{month}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [등록] multiplus.insertLoanReturnHolidayInfo -->
+	<insert id="insertLoanReturnHolidayInfo" parameterType="map">
+		INSERT INTO holiday_tbl (
+			year,
+			month,
+			days,
+			edit_date
+		) VALUES (
+			#{year},
+			#{month},
+			#{days},
+			now()
+		)
+	</insert>
+	
+	<!-- [수정] multiplus.updateLoanReturnHolidayInfo -->
+	<update id="updateLoanReturnHolidayInfo" parameterType="map">
+		UPDATE holiday_tbl
+		   SET
+			days = #{days},
+			edit_date = now()
+		<where>
+			rec_key = #{rec_key}
+		</where>
+	</update>
+	
+	<!-- [삭제] multiplus.deleteLoanReturnHolidayInfo -->
+	<delete id="deleteLoanReturnHolidayInfo" parameterType="map">
+		DELETE FROM holiday_tbl
+		<where>
+			rec_key = #{rec_key}
+		</where>
+	</delete>
+	
+	<!-- [조회] multiplus.getLoanReturnEquipRuleList -->
+	<select id="getLoanReturnEquipRuleInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			value_name
+			,use_yn
+			,com
+			,value1
+			,value2
+			,value3
+			,value4
+			,value5
+		FROM
+			equip_tbl
+	</select>
+	
+	<!-- [수정] multiplus.updateLoanReturnEquipRuleInfo -->
+	<update id="updateLoanReturnEquipRuleInfo" parameterType="map">
+		UPDATE equip_tbl
+		   SET
+			use_yn = #{use_yn}
+			,com = #{com}
+			,value1 = #{value1}
+			,value2 = #{value2}
+			,value3 = #{value3}
+			,value4 = #{value4}
+			,value5 = #{value5}
+		<where>
+			value_name = #{value_name}
+		</where>
+	</update>
+	
+	<!-- [조회] multiplus.getLoanReturnBannerSettingInfo -->
+	<select id="getLoanReturnBannerSettingInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			time
+			,loan_cnt
+			,type
+			,return_plan_date
+			,loan_date
+		FROM
+			banner_tbl
+	</select>
+	
+	<!-- [수정] multiplus.updateLoanReturnBannerSettingInfo -->
+	<update id="updateLoanReturnBannerSettingInfo" parameterType="map">
+		UPDATE banner_tbl
+		   SET
+			time = #{time}
+			,loan_cnt = #{loan_cnt}
+			,type = #{type}
+			,return_plan_date = #{return_plan_date}
+			,loan_date = #{loan_date}
+	</update>
+</mapper>

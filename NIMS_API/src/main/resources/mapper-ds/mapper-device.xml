@@ -1,0 +1,782 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="device">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!-- [조회] device.getDeviceCount  -->
+	<select id="getDeviceCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_device
+		<where>
+		<if test='rec_key != "" and rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='model_key != "" and model_key != null'>
+			AND model_key = #{model_key}
+		</if>
+		<if test='device_id != "" and device_id != null'>
+			AND device_id = #{device_id}
+		</if>
+		<if test='device_nm != "" and device_nm != null'>
+			AND device_nm LIKE '%'||#{device_nm}||'%'
+		</if>
+		<if test='device_ip != "" and device_ip != null'>
+			AND device_ip LIKE '%'||#{device_ip}||'%'
+		</if>
+		<if test='connect_yn != "" and connect_yn != null'>
+			AND connect_yn = #{connect_yn}
+		</if>
+		<if test='config_yn != "" and config_yn != null'>
+			AND config_yn = #{config_yn}
+		</if>
+		<if test='did_yn != "" and did_yn != null'>
+			AND did_yn = #{did_yn}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] device.getDeviceDBConnList  -->
+	<select id="getDeviceDBConnList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			device.library_key
+			,device.rec_key as device_key
+			,device.device_id
+			,device.model_key
+			,conn.db_classname
+			,conn.db_url
+			,conn.db_username
+			,conn.db_password
+		FROM tbl_device device
+		INNER JOIN tbl_device_dbconn conn ON device.rec_key = conn.device_key AND conn.db_useyn = 'Y'
+		<where>
+			<if test='model_key != "" and model_key != null'>
+				AND device.model_key = #{model_key}
+			</if>
+			<if test='model_key_array != "" and model_key_array != null'>
+				AND device.model_key IN
+				<foreach item="item" index="index" collection="model_key_array" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		ORDER BY device.rec_key
+	</select>
+
+	<!-- [조회] device.getDeviceInfo -->
+	<select id="getDeviceInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,library_key
+			,model_key
+			,device_id
+			,device_nm
+			,device_ip
+			,device_location
+			,device_desc
+			,device_status
+			,connect_yn
+			,config_yn
+			,did_yn
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM
+			tbl_device
+		<where>
+			<if test='device_id != "" and device_id != null'>
+				AND device_id = #{device_id}
+			</if>
+			<if test='rec_key != "" and rec_key != null'>
+				AND rec_key = #{rec_key}
+			</if>
+		</where> 
+	</select>
+	
+	<!-- [조회] device.getDeviceList -->
+	<select id="getDeviceList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key 
+			,library_key
+			,model_key
+			,device_id
+			,device_nm
+			,device_ip
+			,device_desc
+			,device_status
+			,connect_yn
+			,EXTRACT(MINUTE FROM now() - connect_date) AS connect_interval
+			,config_yn
+			,did_yn
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_device
+		<where>
+		<if test='rec_key != "" and rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='model_key != "" and model_key != null'>
+			AND model_key = #{model_key}
+		</if>
+		<if test='model_key_array != "" and model_key_array != null'>
+			AND model_key IN
+			<foreach item="item" index="index" collection="model_key_array" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test='device_nm != "" and device_nm != null'>
+			AND device_nm LIKE '%'||#{device_nm}||'%'
+		</if>
+		<if test='device_ip != "" and device_ip != null'>
+			AND device_ip LIKE '%'||#{device_ip}||'%'
+		</if>
+		<if test='connect_yn != "" and connect_yn != null'>
+			AND connect_yn = #{connect_yn}
+		</if>
+		<if test='config_yn != "" and config_yn != null'>
+			AND config_yn = #{config_yn}
+		</if>
+		<if test='did_yn != "" and did_yn != null'>
+			AND did_yn = #{did_yn}
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] device.getDeviceInfoCount -->
+	<select id="getDeviceInfoCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) as count
+		FROM 
+			tbl_device d 
+		LEFT JOIN tbl_library l ON d.library_key = l.rec_key
+		LEFT JOIN tbl_model m ON d.model_key = m.rec_key
+		<where>
+			<if test='library_id != "" and library_id != null'>
+				AND l.library_id = #{library_id}
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				AND l.rec_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND d.device_id LIKE '%'||#{device_id}||'%'
+			</if>
+			<if test='device_nm != "" and device_nm != null'>
+				AND d.device_nm LIKE '%'||#{device_nm}||'%'
+			</if>
+			<if test='device_location != "" and device_location != null'>
+				AND d.device_location LIKE '%'||#{device_location}||'%'
+			</if>
+			<if test='device_ip != "" and device_ip != null'>
+				AND d.device_ip LIKE '%'||#{device_ip}||'%'
+			</if>
+			<if test='model_nm != "" and model_nm != null'>
+				AND m.model_nm LIKE '%'||#{model_nm}||'%'
+			</if>
+			<if test='model_key != "" and model_key != null'>
+				AND d.model_key = #{model_key}
+			</if>
+			<if test='model_auth != "" and model_auth != null'>
+				AND d.rec_key IN (SELECT * FROM fn_model_auth_to_array(#{model_auth}))
+			</if>
+			<if test='model_key_array != "" and model_key_array != null'>
+				AND d.model_key IN
+				<foreach item="item" index="index" collection="model_key_array" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] device.getDeviceInfoList -->
+	<select id="getDeviceInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			d.rec_key as device_key
+			,d.library_key
+			,l.library_nm || '[' || l.library_id || ']' AS library_nm
+			,d.device_nm
+			,m.model_nm
+			,fn_code_value('G0004', m.model_type) AS model_type
+			,d.model_key
+			,d.device_id
+			,d.device_location
+			,d.device_ip
+			,d.device_desc
+			,d.device_status
+			,d.connect_yn
+			,d.config_yn
+			,d.device_control_status
+			,fn_code_desc('G0010', d.device_control_status) AS device_control_status_nm
+		FROM 
+			tbl_device d
+		LEFT JOIN tbl_library l ON d.library_key = l.rec_key
+		LEFT JOIN tbl_model m ON d.model_key = m.rec_key
+		<where>
+			<if test='library_id != "" and library_id != null'>
+				l.library_id = #{library_id}
+			</if>
+			<if test='library_key != "" and library_key != null'>
+				l.rec_key = #{library_key}
+			</if>
+			<if test='device_id != "" and device_id != null'>
+				AND d.device_id LIKE '%'||#{device_id}||'%'
+			</if>
+			<if test='device_nm != "" and device_nm != null'>
+				AND d.device_nm LIKE '%'||#{device_nm}||'%'
+			</if>
+			<if test='device_location != "" and device_location != null'>
+				AND d.device_location LIKE '%'||#{device_location}||'%'
+			</if>
+			<if test='device_ip != "" and device_ip != null'>
+				AND d.device_ip LIKE '%'||#{device_ip}||'%'
+			</if>
+			<if test='model_nm != "" and model_nm != null'>
+				AND m.model_nm LIKE '%'||#{model_nm}||'%'
+			</if>
+			<if test='model_key != "" and model_key != null'>
+				AND d.model_key = #{model_key}
+			</if>
+			<if test='model_auth != "" and model_auth != null'>
+				AND d.rec_key IN (SELECT * FROM fn_model_auth_to_array(#{model_auth}))
+			</if>
+			<if test='model_key_array != "" and model_key_array != null'>
+				AND d.model_key IN
+				<foreach item="item" index="index" collection="model_key_array" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		ORDER BY d.library_key, d.rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] device.insertDeviceInfo -->
+	<insert id="insertDeviceInfo" parameterType="map">
+		INSERT INTO tbl_device(
+			library_key
+			,model_key
+			,device_id
+			,device_nm
+			,device_ip
+			,device_desc
+			,device_location
+			,device_status
+			,connect_yn
+			,config_yn
+			,did_yn
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{library_key}
+			,#{model_key}
+			,#{device_id}
+			,#{device_nm}
+			,#{device_ip}
+			,#{device_desc}
+			,#{device_location}
+			,#{device_status}
+			,#{connect_yn}
+			,#{config_yn}
+			,#{did_yn}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	
+	</insert>
+	
+	<!-- [삭제] device.deleteDeviceInfo -->
+	<delete id="deleteDeviceInfo" parameterType="map">
+		DELETE FROM tbl_device
+		WHERE rec_key = #{rec_key}
+	</delete>
+	
+	<!-- [수정] device.updateDeviceInfo -->
+	<update id="updateDeviceInfo" parameterType="map">
+		UPDATE tbl_device
+		SET edit_user = #{worker}, edit_date = now()
+		<if test="library_key != null">
+			,library_key = #{library_key}
+		</if>
+		<if test="model_key != null">
+			,model_key = #{model_key}
+		</if>
+		<if test="device_id != null and device_id != ''">
+			,device_id		= #{device_id}
+		</if>
+		<if test="device_nm != null and device_nm != ''">
+			,device_nm		= #{device_nm}
+		</if>
+		<if test="device_ip != null and device_ip != ''">
+			,device_ip		= #{device_ip}
+		</if>
+		<if test="device_desc != null and device_desc != ''">
+			,device_desc = #{device_desc}
+		</if>
+		<if test="device_status != null and device_status != ''">
+			,device_status = #{device_status}
+		</if>
+		<if test="connect_yn != null and connect_yn != ''">
+			,connect_yn = #{connect_yn}
+		</if>
+		<if test="config_yn != null and config_yn != ''">
+			,config_yn = #{config_yn}
+		</if>
+		<if test="did_yn != null and did_yn != ''">
+			,did_yn = #{did_yn}
+		</if>
+		<where>
+			<choose>
+				<when test='schedule != null and schedule="Y"'>
+					<choose>
+						<when test="device_id != null">
+							AND device_id = #{device_id}
+						</when>
+						<otherwise>
+							AND 1=2
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					AND rec_key = #{rec_key}
+				</otherwise>
+			</choose>
+		</where>
+	</update>
+	
+	<!-- [수정] device.updateDeviceConnInfo -->
+	<update id="updateDeviceConnInfo" parameterType="map">
+		UPDATE tbl_device
+		   SET
+			connect_yn = #{connect_yn}
+		<if test='connect_yn == "Y" and connect_yn != null'>
+			,connect_date = now()
+		</if>
+		<if test='device_status != null'>
+			,device_status = #{device_status}
+		</if>
+			,edit_user = #{worker}
+		WHERE rec_key = #{rec_key}
+	</update>
+
+	<!-- [수정] device.updateDeviceControllStatus -->
+	<update id="updateDeviceControllStatus" parameterType="map">
+		UPDATE tbl_device
+		SET
+		<if test='device_control_status != null'>
+			device_control_status = #{device_control_status}
+			,edit_user = #{worker}
+		</if>
+		WHERE rec_key = #{device_key}
+	</update>
+	
+	<!-- [조회] device.getDeviceStatusList -->
+	<select id="getDeviceStatusList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+		    t1.library_key
+		    ,t3.library_nm
+		    ,t2.model_id
+		    ,t2.model_nm
+		    ,t2.model_type
+		    ,fn_code_value('G0004',t2.model_type) AS model_type_nm
+		    ,t1.device_nm
+		    ,CASE WHEN t1.device_status = '1' AND t1.connect_yn = 'Y' THEN '정상' WHEN t1.device_status = '1' AND t1.connect_yn = 'N' THEN '연결끊김' ELSE '오류' END AS status
+		    ,t1.rec_key AS device_key
+		    ,t1.device_ip
+		    ,t1.device_desc
+		    ,t1.device_location
+		    ,t1.device_status
+		    ,t1.connect_yn
+		FROM
+		    tbl_device t1
+		LEFT JOIN tbl_model t2 ON t1.model_key = t2.rec_key
+		LEFT JOIN tbl_library t3 ON t1.library_key = t3.rec_key
+		<where>
+		<if test='library_key != "" and library_key != null'>
+			AND t1.library_key = #{library_key}
+		</if>
+		<if test='model_type != "" and model_type!= null'>
+			AND t2.model_type = #{model_type}
+		</if>
+		</where>
+		ORDER BY t1.library_key, t1.rec_key
+	</select>
+	
+	<!-- [조회] device.getDeviceStatusTotal -->
+	<select id="getDeviceStatusTotal" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			fn_model_nm(a.model_key)
+			,SUM(CASE WHEN a.device_status = '1' THEN 1 ELSE 0 END) AS total_run_cnt
+			,SUM(CASE WHEN a.device_status = '0' THEN 1 ELSE 0 END) AS total_stop_cnt
+		FROM
+		(
+			SELECT * FROM tbl_device
+			<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='model_type != "" and model_type != null'>
+				AND t2.model_type = #{model_type}
+			</if>
+			</where>
+		) A
+		GROUP BY a.model_key
+	</select>
+	<!-- [조회] device.getDeviceRuleList -->
+	<select id="getDeviceRuleList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,T1.library_key
+			,T3.library_nm
+			,T1.device_key
+			,T2.device_nm
+			,T1.id
+			,T1.value_name
+			,T1.description
+			,T1.opt01
+			,T4.type01
+			,T1.opt02
+			,T4.type02
+			,T1.opt03
+			,T4.type03
+			,T1.opt04
+			,T4.type04
+			,T1.enable
+		FROM
+			tbl_device_rule T1
+			INNER JOIN tbl_device T2 ON T1.device_key = T2.rec_key
+			LEFT OUTER JOIN tbl_library T3 ON T1.library_key = T3.rec_key
+			LEFT OUTER JOIN tbl_device_rule_input_type T4 ON T1.library_key = T4.library_key AND T1.device_key = T4.device_key AND T1.id = T4.id
+		<where>
+			T1.enable = 'Y'
+		<if test='library_key != "" and library_key != null'>
+			AND T1.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND T1.device_key = #{device_key}
+		</if>
+		<if test='id != "" and id != null'>
+			AND T1.id::text = #{id}
+		</if>
+		<if test='value_name != "" and value_name != null'>
+			AND T1.value_name like '%'||#{value_name}||'%'
+		</if>
+		</where>
+		ORDER BY T1.library_key, T1.device_key, T1.id
+	</select>
+	
+	<!-- [수정] deivce.updateDeviceRule -->
+	<update id="updateDeviceRule" parameterType="map">
+		UPDATE tbl_device_rule
+		SET
+			opt01 = #{opt01}
+			,opt02 = #{opt02}
+			,opt03 = #{opt03}
+			,opt04 = #{opt04}
+			,update_date = now()::date
+			,send_req_yn = 'Y'
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] device.getDeviceBookListCnt -->
+	<select id="getDeviceBookListCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*) AS CNT
+		FROM tbl_api_sls_book book
+		LEFT OUTER JOIN tbl_library library ON book.library_key = library.rec_key 
+		LEFT OUTER JOIN tbl_device device ON book.device_key = device.rec_key
+		LEFT OUTER JOIN tbl_api_sls_book_out out ON book.library_key = out.library_key AND book.device_key = out.device_key AND book.rec_key = out.book_key
+		LEFT OUTER JOIN (SELECT library_key, device_key, book_no, COUNT(return_date) AS cnt FROM view_sls_use_log GROUP BY library_key, device_key, book_no) loan ON book.library_key = loan.library_key AND book.device_key = loan.device_key AND book.book_no = loan.book_no
+		<where>
+		book_status = '1'
+		AND (out.status != '1' OR out.status IS NULL)
+		<if test='library_key != "" and library_key != null'>
+			AND book.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND book.device_key = #{device_key}
+		</if>
+		<if test='title != "" and title != null'>
+			AND book.title LIKE '%'||#{title}||'%'
+		</if>
+		<if test='author != "" and author != null'>
+			AND book.author LIKE '%'||#{author}||'%'
+		</if>
+		<if test='publisher != "" and publisher != null'>
+			AND book.publisher LIKE '%'||#{publisher}||'%'
+		</if>
+		<if test='book_no != "" and book_no != null'>
+			AND book.book_no LIKE '%'||#{book_no}||'%'
+		</if>
+		<if test='state != "" and state != null'>
+			AND book.state = #{state}
+		</if>
+		</where>
+	</select>
+	<!-- [조회] device.getDeviceBookList -->
+	<select id="getDeviceBookList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			library.library_nm || '['||library.library_id||']' as library_nm
+			,library.rec_key as library_key
+			,device.device_nm || '['||device.device_id||']' as device_nm
+			,device.device_id
+			,device.rec_key as device_key
+			,book.rec_key as book_key
+			,book.id
+			,book.state
+			,out.status
+			,book.book_key as device_book_key
+			,book.book_no
+			,book.isbn
+			,book.rfid
+			,TO_CHAR(book.insert_date,'YYYY-MM-DD hh24:mi:ss') as insert_date
+			,TO_CHAR(book.loan_date,'YYYY-MM-DD hh24:mi:ss') as loan_date
+			,TO_CHAR(book.return_date,'YYYY-MM-DD hh24:mi:ss') as return_date
+			,book.title
+			,book.author
+			,book.publisher
+			,COALESCE(loan.cnt, 0) as loan_cnt
+		FROM tbl_api_sls_book book
+		LEFT OUTER JOIN tbl_library library ON book.library_key = library.rec_key 
+		LEFT OUTER JOIN tbl_device device ON book.device_key = device.rec_key
+		LEFT OUTER JOIN tbl_api_sls_book_out out ON book.library_key = out.library_key AND book.device_key = out.device_key AND book.rec_key = out.book_key
+		LEFT OUTER JOIN (SELECT library_key, device_key, book_no, COUNT(return_date) AS cnt FROM view_sls_use_log GROUP BY library_key, device_key, book_no) loan ON book.library_key = loan.library_key AND book.device_key = loan.device_key AND book.book_no = loan.book_no
+		<where>
+		book_status = '1'
+		AND (out.status != '1' OR out.status IS NULL)
+		<if test='library_key != "" and library_key != null'>
+			AND book.library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND book.device_key = #{device_key}
+		</if>
+		<if test='title != "" and title != null'>
+			AND book.title LIKE '%'||#{title}||'%'
+		</if>
+		<if test='author != "" and author != null'>
+			AND book.author LIKE '%'||#{author}||'%'
+		</if>
+		<if test='publisher != "" and publisher != null'>
+			AND book.publisher LIKE '%'||#{publisher}||'%'
+		</if>
+		<if test='book_no != "" and book_no != null'>
+			AND book.book_no LIKE '%'||#{book_no}||'%'
+		</if>
+		<if test='state != "" and state != null and state != 3'>
+			AND book.state = #{state}
+		</if>
+		<if test='state != "" and state != null and state == 3'>
+			AND out.status = '0'
+			AND state = '1'
+		</if>
+		</where>
+		ORDER BY book.library_key, book.device_key, book.book_no
+	</select>
+	
+	<!-- [조회] device.getDeviceEventDetailListCnt -->
+	<select id="getDeviceEventDetailListCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*) AS CNT
+		FROM tbl_api_event
+		<where>
+			event_date between TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='model_auth != "" and model_auth != null'>
+			AND device_key IN (SELECT * FROM fn_model_auth_to_array(#{model_auth}))
+		</if>
+		</where>
+	</select>
+	<!-- [조회] device.getDeviceEventDetailList -->
+	<select id="getDeviceEventDetailList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			TO_CHAR(event_date, 'YYYY-MM-DD HH24:MI:SS') AS event_date
+			,fn_library_nm(library_key) as library_nm 
+			,fn_device_nm(device_key) as device_nm
+			,event_type
+			,fn_code_value('G0008' , event_type) as event_type_nm
+			,event_code
+			,fn_code_value('G0009' , event_code) as event_code_nm
+		FROM tbl_api_event
+		<where>
+			event_date between TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='device_key != "" and device_key != null'>
+			AND device_key = #{device_key}
+		</if>
+		<if test='model_auth != "" and model_auth != null'>
+			AND device_key IN (SELECT * FROM fn_model_auth_to_array(#{model_auth}))
+		</if>
+		</where>
+		ORDER BY event_date desc
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [조회] deivce.getDeviceEventType -->
+	<select id="getDeviceEventType" resultType="java.util.LinkedHashMap">
+		SELECT 
+			code
+			,code_value
+		FROM tbl_code
+		<where>
+			grp_key = (SELECT rec_key FROM tbl_code_grp WHERE grp_id = 'G0008')
+		</where> 
+	</select>
+	
+	<!-- [조회] device.getDeviceWolInfo -->
+	<select id="getDeviceWolInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			device_key 
+			,device_broadcast
+			,device_port
+			,device_mac
+		FROM 
+			tbl_device_wol 
+		WHERE device_key = #{device_key}
+	</select>
+	<!-- [조회] device.getDeviceControlButtonList -->
+	<select id="getDeviceControlButtonList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			code_value
+			,code_desc
+			,code_value2
+			,code_value3
+		FROM
+			tbl_code
+		<where>
+			grp_key = (SELECT rec_key FROM tbl_code_grp WHERE grp_id = 'G0010')
+			AND use_yn = 'Y'
+		</where>
+		ORDER BY rec_key
+	</select>
+	
+	<!-- [조회] device.getDrumRuleList -->
+	<select id="getDrumRuleList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.rec_key
+			,T1.library_key
+			,T2.library_nm
+			,T1.device_key
+			,T3.device_nm
+			,T1.no
+			,T1.posi
+			,T1.step
+			,((CASE WHEN T1.posi = '1' THEN '전면' ELSE '후면' END) || ' - ' || T1.step) AS posistep
+			,T1.use
+			,T1.volume
+			,T1.grade
+			,T1.last_work
+			,T1.error_msg
+			,T1.use_smartlib
+			,T1.use_reserve
+			,T1.use_other_loc_return
+			,T1.use_other_lib_return
+		FROM
+			tbl_drum_rule T1
+			INNER JOIN tbl_library T2 ON T1.library_key = T2.rec_key
+			INNER JOIN tbl_device T3 ON T1.device_key = T3.rec_key
+		<where>
+		<if test='library_key != "" and library_key != null'>
+			AND T1.library_key = #{library_key}
+		</if>
+		<if test='no != "" and no != null'>
+			AND T1.no::text = #{no}
+		</if>
+		<if test='use != "" and use != null'>
+			AND T1.use = #{use}
+		</if>
+		<if test='volume != "" and volume != null'>
+			AND T1.volume = #{volume}
+		</if>
+		<if test='grade != "" and grade != null'>
+			AND T1.grade = #{grade}
+		</if>
+		<if test='use_smartlib != "" and use_smartlib != null'>
+			AND T1.use_smartlib = #{use_smartlib}
+		</if>
+		<if test='use_reserve != "" and use_reserve != null'>
+			AND T1.use_reserve = #{use_reserve}
+		</if>
+		<if test='use_other_loc_return != "" and use_other_loc_return != null'>
+			AND T1.use_other_loc_return = #{use_other_loc_return}
+		</if>
+		<if test='use_other_lib_return != "" and user_other_lib_return != null'>
+			AND T1.use_other_lib_return = #{use_other_lib_return}
+		</if>
+		<if test='posiStep != "" and posiStep != null'>
+			AND T1.posi||'-'||T1.step = #{posiStep}
+		</if>
+		</where>
+		ORDER BY T1.library_key, T1.device_key, T1.posi, T1.step
+	</select>
+	
+	<!-- [수정] device.updateDrumRule -->
+	<update id="updateDrumRule" parameterType="map">
+		UPDATE tbl_drum_rule
+		SET
+			use = #{use}
+			,volume = #{volume}
+			,grade = #{grade}
+			,last_work = #{last_work}
+			,error_msg = #{error_msg}
+			,use_smartlib = #{use_smartlib}
+			,use_reserve = #{use_reserve}
+			,use_other_loc_return = #{use_other_loc_return}
+			,use_other_lib_return = #{use_other_lib_return}
+			,send_req_yn = 'Y'
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [수정] device.updateBookOutWorkStatus -->
+	<update id="updateBookOutWorkStatus" parameterType="map">
+		UPDATE tbl_device
+		SET
+			book_out_work_status = #{book_out_work_status}
+		WHERE
+			rec_key = #{rec_key}
+	</update>
+	
+	<!-- [조회] device.getDeviceSftpInfoList -->
+	<select id="getDeviceSftpInfoList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			sftp.device_key
+			,device.device_id
+			,sftp.host
+			,sftp.id
+			,sftp.port
+			,sftp.banner_image_path
+		FROM
+			tbl_device device
+			INNER JOIN tbl_device_sftp sftp ON device.rec_key = sftp.device_key
+		<where>
+			<if test='device_key != "" and device_key != null'>
+				AND device.rec_key = #{device_key}
+			</if>
+		</where>
+	</select>
+</mapper>

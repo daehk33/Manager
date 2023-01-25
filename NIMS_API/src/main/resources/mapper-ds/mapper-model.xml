@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="model">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	
+	<!-- [조회] model.checkModelDuplicated  -->
+	<select id="checkModelDuplicated" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_model
+		WHERE
+			model_id = #{model_id}
+	</select>
+	
+	<!--  [조회] model.getModelTypeCount -->
+	<select id="getModelTypeCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_code
+		<where>
+			grp_key = 4
+			<if test='model_auth != "" and model_auth != null'>
+				AND code NOT IN
+				(
+					SELECT
+						DISTINCT model_type
+					FROM
+						tbl_model
+					WHERE
+						rec_key IN
+						<foreach item="item" index="index" collection="model_auth" open="(" separator="," close=")">
+							#{item}
+						</foreach> 
+				)
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] model.getModelTypeList -->
+	<select id="getModelTypeList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			rec_key
+			,code
+			,code_value
+			,code_desc
+		FROM
+			tbl_code
+		<where>
+			grp_key = 4
+			<if test='manager_grade != "0" and model_auth != "" and model_auth != null'>
+				AND code NOT IN
+				(
+					SELECT
+						DISTINCT model_type
+					FROM
+						tbl_model
+					<where>
+							rec_key IN
+							<foreach item="item" index="index" collection="model_auth" open="(" separator="," close=")">
+								#{item}
+							</foreach>
+					</where> 
+				)
+			</if>
+		</where>
+	</select>
+
+	<!-- [조회] model.getModelCount  -->
+	<select id="getModelCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(*) AS count
+		FROM 
+			tbl_model
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='model_id != "" and model_id != null'>
+			AND model_id LIKE '%'||#{model_id}||'%'
+		</if>
+		<if test='model_nm != "" and model_nm != null'>
+			AND model_nm LIKE '%'||#{model_nm}||'%'
+		</if>
+		<if test='model_type != "" and model_type != null'>
+			AND model_type = #{model_type}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] model.getModelList  -->
+	<select id="getModelList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			rec_key
+			,model_id
+			,model_nm
+			,model_type
+			,(select fn_code_value('G0004', model_type)) AS model_type_nm
+			,model_desc
+			,create_user
+			,edit_user
+			,TO_CHAR(edit_date, 'YYYY-MM-DD HH24:MI:SS') AS edit_date 
+			,TO_CHAR(create_date, 'YYYY-MM-DD HH24:MI:SS') AS create_date
+		FROM 
+			tbl_model
+		<where>
+		<if test='rec_key != null'>
+			AND rec_key = #{rec_key}
+		</if>
+		<if test='model_id != "" and model_id != null'>
+			AND model_id LIKE '%'||#{model_id}||'%'
+		</if>
+		<if test='model_nm != "" and model_nm != null'>
+			AND model_nm LIKE '%'||#{model_nm}||'%'
+		</if>
+		<if test='model_type != "" and model_type != null'>
+			AND model_type = #{model_type}
+		</if>
+		</where>
+		ORDER BY rec_key
+		<if test='pageIdx != "" and pageIdx != null'>
+			LIMIT ${pageSize} OFFSET ((${pageIdx} * ${pageSize}) - ${pageSize})
+		</if>
+	</select>
+	
+	<!-- [등록] model.insertModelInfo  -->
+	<insert id="insertModelInfo" parameterType="map">
+		INSERT INTO tbl_model(
+			model_id
+			,model_nm
+			,model_type
+			,model_desc
+			,create_user
+			,edit_user
+			,create_date
+			,edit_date
+		)
+		VALUES (
+			#{model_id}
+			,#{model_nm}
+			,#{model_type}
+			,#{model_desc}
+			,#{worker}
+			,#{worker}
+			,now()
+			,now()
+		)
+	</insert>
+	
+	<!-- [삭제] model.deleteModelInfo  -->
+	<delete id="deleteModelInfo" parameterType="map">
+		DELETE FROM tbl_model
+		WHERE rec_key = #{rec_key}
+			AND rec_key NOT IN (SELECT DISTINCT model_key FROM tbl_device WHERE model_key = #{rec_key});
+	</delete>
+	
+	<!-- [수정] model.updateModelInfo  -->
+	<update id="updateModelInfo" parameterType="map">
+		UPDATE tbl_model
+		SET
+				model_id		= #{model_id}
+				,model_nm		= #{model_nm}
+				,model_type		= #{model_type}
+				,model_desc		= #{model_desc}
+				,edit_user		= #{worker}
+				,edit_date		= now()
+		WHERE rec_key = #{rec_key}
+	</update>
+	
+</mapper>

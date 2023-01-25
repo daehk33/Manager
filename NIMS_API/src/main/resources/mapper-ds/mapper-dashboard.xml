@@ -1,0 +1,954 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="dashboard">
+	<resultMap id="map" type="java.util.HashMap" />
+	
+	<cache />
+	<!--
+		*****[공통]*****
+	-->
+	<!-- [조회] 실시간 모니터링 이력 조회 -->
+	<select id="getLiveHistoryList" parameterType="map" resultType="java.util.LinkedHashMap">
+	SELECT * FROM (
+		SELECT
+			event.date
+			,event.library_key
+			,event.type
+			,event.message
+		FROM (
+			SELECT
+				loan_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || user_name || '"님 도서"' || book_no || '" 대출' AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_sls_use_log log ON library.rec_key=log.library_key AND device.rec_key = log.device_key
+			<where>
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				return_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || user_name || '"님 도서"' || book_no || '" 반납' AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_sls_use_log log ON library.rec_key=log.library_key AND device.rec_key = log.device_key
+			<where>
+				return_date IS NOT NULL
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				loan_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || COALESCE(member_key::text,'미등록 이용자') || '"님 도서 "' || book_key || '" 대출' AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_loan log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				loan_date IS NOT NULL
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where> 
+		UNION ALL
+			SELECT
+				return_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || COALESCE(member_key::text,'미등록 이용자') || '"님 도서 "' || book_key || '" 반납' AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_loan log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				return_date IS NOT NULL
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				log_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || user_name || '"님 도서 "' || book_no || '" 대출'  AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_loanreturn_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				status = '0'
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				log_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || user_name || '"님 도서 "' || book_no || '" 반납'  AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_loanreturn_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				status = '1'
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				(book_state_date::date || ' ' || substring(book_state_time, 1, 2) || ':' || substring(book_state_time, 3, 2) || ':' || substring(book_state_time, 5, 2))::timestamp AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || st_name || '"님 도서 "' || book_no || '" 반납'  AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_return_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				loan_date AS DATE
+				,log.library_key
+				,device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || user_name || '"님 도서 "' || book_no || '" 대출'  AS message
+			FROM
+				tbl_library library
+				INNER JOIN tbl_device device ON library.rec_key = device.library_key
+				INNER JOIN tbl_api_resvloan_use_log log ON library.rec_key = log.library_key AND device.rec_key = log.device_key
+			<where>
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				log_time AS DATE
+				,log.library_key
+				,device.rec_key AS device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device.rec_key) || '] "' || member.user_nm || '"님 입실"' AS message
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN tbl_device device ON library.rec_key = device.library_key
+				LEFT OUTER JOIN tbl_api_gate_use_log log ON device.device_id = log.device_id AND device.library_key = log.library_key AND library.rec_key = log.library_key
+				LEFT OUTER JOIN tbl_api_member member ON log.user_id = member.user_id AND library.rec_key = member.library_key
+			<where>
+				log_type = 'I'
+				AND log_time between date_trunc('day', now()) - INTERVAL '6 day' AND date_trunc('day', now()) + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				log_time AS DATE
+				,log.library_key
+				,device.rec_key AS device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device.rec_key) || '] "' || member.user_nm || '"님 퇴실"' AS message
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN tbl_device device ON library.rec_key = device.library_key
+				LEFT OUTER JOIN tbl_api_gate_use_log log ON device.device_id = log.device_id AND device.library_key = log.library_key AND library.rec_key = log.library_key
+				LEFT OUTER JOIN tbl_api_member member ON log.user_id = member.user_id AND library.rec_key = member.library_key
+			<where>
+				log_type = 'O'
+				AND log_time between date_trunc('day', now()) - INTERVAL '6 day' AND date_trunc('day', now()) + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			</where>
+		UNION ALL
+			SELECT
+				log_date AS DATE
+				,log.library_key
+				,device.rec_key AS device_key
+				,'2' AS TYPE
+				,'[' || fn_device_nm(device.rec_key) || '] " 부정도서: (' || log.book_no || ') ' || log.book_title AS message
+			FROM TBL_LIBRARY library
+			LEFT OUTER JOIN TBL_DEVICE device ON library.rec_key = device.library_key
+			LEFT OUTER JOIN TBL_API_ANTILOST_BOOK log ON device.device_id = log.device_id AND device.library_key = log.library_key AND library.rec_key = log.library_key
+			WHERE log_date BETWEEN date_trunc('day', now()) - INTERVAL '6 day' AND date_trunc('day', now()) + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		UNION ALL
+			SELECT
+				event_date AS DATE
+				,library_key
+				,device_key
+				,event_type AS TYPE
+				,'[' || fn_device_nm(device_key) || '] "' || CASE WHEN event_msg IS NULL OR event_msg = '' THEN fn_code_value('G0009', event_code) ELSE event_msg END || '" 이벤트 발생' AS message
+			FROM tbl_api_event
+			WHERE event_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		) event
+		<where>
+			<if test='model_auth != "" and model_auth != null'>
+				AND event.device_key IN (SELECT * FROM fn_model_auth_to_array(#{model_auth}))
+			</if>
+		</where>
+		ORDER BY event.date desc
+	) history LIMIT 10
+	</select>
+	
+	<!-- [조회] 장애 현황 조회 -->
+	<select id="getEventStatusList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			T1.code AS event_type
+			,T1.code_value AS event_type_nm
+			,COALESCE(T2.count, 0) AS count
+		FROM (
+			SELECT * FROM tbl_code_grp t1
+			LEFT OUTER JOIN tbl_code t2 ON t1.rec_key = t2.grp_key
+			WHERE
+				t1.grp_id = 'G0008' 
+		) T1
+		LEFT OUTER JOIN (
+			SELECT event_type, count(*) AS count
+			FROM tbl_api_event t1
+			LEFT OUTER JOIN tbl_device t2 ON t1.device_key = t2.rec_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				T1.library_key = #{library_key}
+			</if>
+			<if test='startDate != null and endDate != null'>
+				AND event_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			</if>
+			<if test='model_key != "" and model_key != null'>
+				AND t2.model_key = #{model_key}
+			</if>
+		</where>
+			GROUP BY event_type 
+		) T2 ON T1.code = T2.event_type
+		ORDER BY T1.code
+	</select>
+	
+	<!-- [조회] 장애 분석 조회 -->
+	<select id="getEventAnalysisList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			event_code
+			,COALESCE(fn_code_value('G0009', event_code),'기타') AS event_code_nm
+			,COUNT(*) AS count
+		FROM tbl_api_event
+		WHERE
+			event_type = '0'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			<if test='startDate != null and endDate != null'>
+		   		AND event_date between to_date(#{startDate}, 'YYYY-MM-DD') and to_date(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+		   	</if>
+		GROUP BY event_code
+		ORDER BY event_code
+	</select>
+	
+	<select id="getEventCodeInfo" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT COALESCE(fn_code_value('G0009', #{event_code}),'기타') AS event_code_nm 
+	</select>
+	
+	<!-- [조회] 장비 이벤트 알림 목록 조회 -->
+	<select id="getAlarmList" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			id
+			,library_key
+			,type
+			,message
+			,date
+		FROM tbl_alarm
+		<where>
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		<if test='model_key != "" and model_key != null'>
+			AND model_key = #{model_key}
+		</if>
+		</where>
+		ORDER BY date ASC
+	</select>
+	
+	<!-- [등록] 장비 이벤트 알림 추가 -->
+	<insert id="insertAlarmInfo">
+		INSERT INTO tbl_alarm(
+			id
+			,library_key
+			,type
+			,message
+			,date
+			,model_key
+		)
+		VALUES (
+			#{id}
+			,#{library_key}
+			,#{type}
+			,#{message}
+			,TO_TIMESTAMP(#{date}, 'YYYY-MM-DD HH24:MI:SS')
+			,#{model_key}
+		)
+	</insert>
+	
+	<!-- [삭제] 장비 이벤트 알림 삭제 -->
+	<delete id="deleteAlarmInfo">
+		DELETE FROM tbl_alarm
+		WHERE id = #{id}
+	</delete>
+	
+	<!--
+		*****[스마트도서관]*****
+	-->
+	<!-- [조회] 스마트도서관 도서 대출 현황 조회 -->
+	<select id="getBookLoanStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_book_cnt
+			,COALESCE(SUM(CASE WHEN STATE = '1' THEN 1 ELSE 0 END), 0) AS total_loanable_cnt
+			,COALESCE(SUM(CASE WHEN STATE = '0' THEN 1 ELSE 0 END), 0) AS total_loan_cnt
+		FROM
+			tbl_api_sls_book book inner join tbl_device device on book.device_key = device.rec_key
+		<where>
+			book_status = '1'
+			<if test='library_key != "" and library_key != null'>
+				AND book.library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 스마트도서관 금일 이용정보 조회(도서) -->
+	<select id="getUseLogCntbyBook" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(SUM(CASE WHEN loan_Date > date_trunc('day', now()) THEN 1 ELSE 0 END),0) AS loan_cnt ,
+			COALESCE(SUM(CASE WHEN return_Date > date_trunc('day', now()) THEN 1 ELSE 0 END),0) AS return_cnt
+		FROM
+			tbl_api_sls_use_log
+		<where>
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		</where>
+	</select>
+	<!-- [조회] 스마트도서관  금일 이용정보 조회(이용자) -->
+	<select id="getUseLogCntbyUser" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(COUNT(DISTINCT CASE WHEN loan_Date > date_trunc('day', now()) THEN user_id ELSE null END),0) AS loan_cnt ,
+			COALESCE(COUNT(DISTINCT CASE WHEN return_Date > date_trunc('day', now()) THEN user_id ELSE null END),0) AS return_cnt
+		FROM
+			tbl_api_sls_use_log
+		<where>
+		<if test='library_key != "" and library_key != null'>
+			AND library_key = #{library_key}
+		</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 스마트도서관  주간 이용정보 조회 -->
+	<select id="getUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT 
+			'' as event_date 
+			,'' AS label_nm
+			,'대출횟수' as loan_cnt
+			,'반납횟수' as return_cnt
+			<if test='reserve_loan == "Y"'>
+				,'예약대출' as reservation_cnt
+			</if>
+			<if test='unattended_return == "Y"'>
+				,'무인반납'  as unareturn_cnt
+			</if>
+		UNION ALL 
+		SELECT
+			TO_CHAR(date.date,'YYYY-MM-DD') as event_date 
+			,TO_CHAR(date.date, 'MM/DD(Dy)') as label_nm
+			,COALESCE(loan.cnt,0)::text as loan_cnt
+			,COALESCE(return.cnt,0)::text as return_cnt
+			<if test='reserve_loan == "Y"'>
+				,COALESCE(reservation.cnt,0)::text as reservation_cnt
+			</if>
+			<if test='unattended_return == "Y"'>
+				,COALESCE(unaReturn.cnt,0)::text as unareturn_cnt
+			</if>
+		FROM
+		(
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS DATE
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', loan_date) AS event_date
+				,count(*) AS cnt
+			FROM
+				tbl_api_sls_use_log
+			WHERE
+				loan_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', loan_date)
+		) loan ON date.date = loan.event_date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', return_date) AS event_date
+				,count(*) AS cnt
+			FROM
+				tbl_api_sls_use_log
+			WHERE
+				return_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', return_date)
+		) return ON date.date = return.event_date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', loan_date) AS event_date
+				,count(*) AS cnt
+			FROM
+				tbl_api_sls_reservation
+			WHERE
+				loan_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', loan_date)
+		) reservation ON date.date = reservation.event_date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', return_date) AS event_date
+				,count(*) AS cnt
+			FROM
+				tbl_api_sls_return
+			WHERE
+				return_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', return_date)
+		) unaReturn ON date.date = unaReturn.event_date
+	</select>
+	
+	<!--
+		*****[대출반납기]*****
+	-->
+	<!-- [조회] 대출반납기 현황 조회 -->
+	<select id="getLoanReturnStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(SUM(CASE WHEN TO_DATE(loan_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN 1 ELSE 0 END), 0) AS loan_cnt,
+			COALESCE(SUM(CASE WHEN TO_DATE(return_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN 1 ELSE 0 END), 0) AS return_cnt
+		FROM
+			tbl_api_loanReturn_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 대출반납기 금일 이용정보 조회(도서) -->
+	<select id="getLoanReturnUseLogCntbyBook" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(SUM(CASE WHEN TO_DATE(loan_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN 1 ELSE 0 END), 0) AS loan_cnt,
+			COALESCE(SUM(CASE WHEN TO_DATE(return_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN 1 ELSE 0 END), 0) AS return_cnt
+		FROM
+			tbl_api_loanReturn_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 대출반납기 금일 이용정보 조회(이용자) -->
+	<select id="getLoanReturnUseLogCntbyUser" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(COUNT(DISTINCT CASE WHEN TO_DATE(loan_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN user_id ELSE null END), 0) AS loan_cnt,
+			COALESCE(COUNT(DISTINCT CASE WHEN TO_DATE(return_date, 'YYYY-MM-DD') >= date_trunc('day', now()) THEN user_id ELSE null END), 0) AS return_cnt
+		FROM
+			tbl_api_loanReturn_use_log
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 대출반납기 주간  이용정보 조회 -->
+	<select id="getLoanReturnUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' as log_date
+			,'' AS label_nm
+			,'대출횟수' as loan_cnt
+			,'반납횟수' as return_cnt
+		UNION ALL
+		SELECT
+			TO_CHAR(date.date, 'YYYY-MM-DD') as log_date
+			,TO_CHAR(date.date, 'MM/DD(Dy)') as label_nm
+			,COALESCE(loan.cnt, 0)::text as loan_cnt
+			,COALESCE(return.cnt, 0)::text as return_cnt
+		FROM
+		(
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS DATE
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', TO_DATE(loan_date, 'YYYY-MM-DD')) AS event_date
+				,count(*) as cnt
+			FROM
+				tbl_api_loanReturn_use_log
+			WHERE
+				loan_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', TO_DATE(loan_date, 'YYYY-MM-DD'))
+		) loan ON date.date = loan.event_date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', TO_DATE(return_date, 'YYYY-MM-DD')) AS event_date
+				,count(*) as cnt
+			FROM
+				tbl_api_loanReturn_use_log
+			WHERE
+				return_date IS NOT NULL
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date_trunc('day', TO_DATE(return_date, 'YYYY-MM-DD'))
+		) return ON date.date = return.event_date
+	</select>
+	
+	<!--
+		*****[반납기]*****
+	-->
+	<!-- [조회] 반납기 반납 현황 조회 -->
+	<select id="getReturnStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_return_cnt
+			,COUNT(DISTINCT id_no) AS total_return_user_cnt
+		FROM
+			tbl_api_return_use_log
+		<where>
+			book_state_date::date > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 반납기 금일 이용정보 조회 -->
+	<select id="getReturnUseLogCntByToday" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_return_cnt
+			,COUNT(DISTINCT id_no) AS total_return_user_cnt
+		FROM
+			tbl_api_return_use_log
+		<where>
+			book_state_date::date > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 반납기 주간 이용정보 조회 -->
+	<select id="getReturnUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS return_date
+			,'' AS label_nm
+			,'권 수' AS total_book_cnt
+			,'이용자 수' AS total_user_cnt
+		UNION ALL
+		SELECT
+			TO_CHAR(date.date, 'YYYY-MM-DD') AS evnet_date
+			,TO_CHAR(date.date, 'MM/DD(Dy)') AS label_nm
+			,COALESCE(return.book_cnt, 0)::text AS total_book_cnt
+			,COALESCE(return.user_cnt, 0)::text AS total_user_cnt
+		FROM
+		(
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS DATE
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				DATE_TRUNC('day', book_state_date::date) AS event_date
+				,COUNT(*) AS book_cnt
+				,COUNT(DISTINCT id_no) AS user_cnt
+			FROM
+				tbl_api_return_use_log
+			<where>	
+				<if test='library_key != "" and library_key != null'>
+					AND library_key = #{library_key}
+				</if>
+			</where>
+			GROUP BY DATE_TRUNC('day', book_state_date::date)
+		) return ON date.date = return.event_date
+	</select>
+	
+	<!-- [조회] 반납기 시간별 이용정보 조회 -->
+	<select id="getReturnUseLogCntbyTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS return_time
+			,'' AS label_nm
+			,'권 수' AS total_book_cnt
+			,'이용자 수' AS total_user_cnt
+		UNION ALL
+		SELECT
+			date.time::text AS event_time
+			,date.time || '시' AS label_nm
+			,COUNT(log.id_no)::text AS total_cnt
+			,COUNT(DISTINCT log.id_no)::text AS total_user_cnt
+		FROM	
+			GENERATE_SERIES(0, 23, 1) date(time)
+			LEFT OUTER JOIN 
+			(
+				SELECT
+					SUBSTR(log.book_state_time, 1, 2)::int AS return_time
+					,id_no
+				FROM
+					tbl_library library
+					INNER JOIN tbl_api_return_use_log log ON log.library_key = library.rec_key
+				<where>
+					log.book_state_date::date > date_trunc('day', now())
+					<if test='library_key != "" and library_key != null'>
+						AND library.rec_key = #{library_key}
+					</if>
+				</where>
+			) log ON log.return_time <![CDATA[<=]]> time
+		GROUP BY date.time
+	</select>
+	
+	<!--
+		*****[예약대출기]*****
+	-->
+	<!-- [조회] 예약대출기 대출 현황 조회 -->
+	<select id="getResvLoanStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_book_cnt,
+			COUNT(DISTINCT user_id) AS total_user_cnt
+		FROM
+			tbl_api_resvLoan_use_log
+		<where>
+			insert_date > date_trunc('day', now())
+			AND status = 'L'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 예약대출기 금일 이용정보 조회 -->
+	<select id="getResvLoanUseLogCntbyToday" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_book_cnt,
+			COUNT(DISTINCT user_id) AS total_user_cnt
+		FROM
+			tbl_api_resvLoan_use_log
+		<where>
+			loan_date > date_trunc('day', now())
+			AND status = 'L'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 예약대출기 주간 이용정보 조회 -->
+	<select id="getResvLoanUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS loan_date
+			,'' AS label_nm
+			,'권 수' AS total_book_cnt
+			,'이용자 수' AS total_user_cnt
+		UNION ALL
+		SELECT
+			TO_CHAR(date.date, 'YYYY-MM-DD') AS event_date
+			,TO_CHAR(date.date, 'MM/DD(Dy)') AS label_nm
+			,COALESCE(resvLoan.book_cnt, 0)::text AS total_book_cnt
+			,COALESCE(resvLoan.user_cnt, 0)::text AS total_user_cnt
+		FROM
+		(
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS DATE
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', loan_date) AS event_date
+				,COUNT(*) AS book_cnt
+				,COUNT(DISTINCT user_id) AS user_cnt
+			FROM
+				tbl_api_resvLoan_use_log
+			<where>
+				status = 'L'
+				<if test='library_key != "" and library_key != null'>
+					AND library_key = #{library_key}
+				</if>
+			</where>
+			GROUP BY date_trunc('day', loan_date)
+		) resvLoan on date.date = resvLoan.event_date
+	</select>
+	
+	<!--
+		*****[출입게이트]*****
+	-->
+	<!-- [조회] 출입게이트 출입 현황 조회 -->
+	<select id="getGateStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_pass_cnt,
+			COUNT(DISTINCT user_id) AS total_user_cnt
+		FROM
+			tbl_library library 
+			LEFT OUTER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key
+		<where>
+			log_time > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 출입게이트 금일 이용정보 조회 -->
+	<select id="getGateUseLogCntbyToday" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COUNT(*) AS total_pass_cnt,
+			COUNT(DISTINCT user_id) AS total_user_cnt
+		FROM
+			tbl_library library 
+			LEFT OUTER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key
+		<where>
+			log_time > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 출입게이트 주간 이용정보 조회 -->
+	<select id="getGateUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS pass_date
+			,'' AS label_nm
+			,'출입 횟수' AS total_pass_cnt
+			,'이용자 수' AS total_user_cnt
+		UNION ALL
+		SELECT
+			TO_CHAR(date.date, 'YYYY-MM-DD') AS event_date
+			,TO_CHAR(date.date, 'MM/DD(Dy)') AS label_nm
+			,COALESCE(gate.pass_cnt, 0)::text AS total_pass_cnt
+			,COALESCE(gate.user_cnt, 0)::text AS total_user_cnt
+		FROM
+		(
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS DATE
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', log_time) AS event_date
+				,COUNT(*) AS pass_cnt
+				,COUNT(DISTINCT user_id) AS user_cnt
+			FROM
+				tbl_library library
+				LEFT OUTER JOIN tbl_api_gate_use_log log ON library.rec_key = log.library_key
+			WHERE
+				log_time between TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+				<if test='library_key != "" and library_key != null'>
+					AND library_key = #{library_key}
+				</if>
+			GROUP BY date_trunc('day', log_time)
+		) gate ON date.date = gate.event_date
+	</select>
+	
+	<!-- [조회] 출입게이트 시간별 이용정보 조회 -->
+	<select id="getGateUseLogCntbyTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS pass_time
+			,'' AS label_nm
+			,'출입 횟수' AS total_pass_cnt
+			,'이용자 수' AS total_user_cnt
+		UNION ALL
+		SELECT
+			date.time::text AS event_time
+			,date.time || '시' AS label_nm
+			,count(log.user_id)::text as total_cnt
+			,count(distinct log.user_id)::text as total_user_cnt
+		FROM
+			GENERATE_SERIES(0, 23, 1) date(time)
+			LEFT OUTER JOIN
+			(
+			SELECT 
+				log_time
+				,user_id
+			FROM 
+				tbl_library library
+				INNER JOIN tbl_api_gate_use_log log ON log.library_key = library.rec_key
+			WHERE 
+				log_time > date_trunc('day', now())
+				<if test='library_key != "" and library_key != null'>
+					AND library.rec_key = #{library_key}
+				</if>
+			) log ON TO_CHAR(log.log_time, 'HH24')::integer <![CDATA[<=]]> time
+		GROUP BY date.time
+	</select>
+	
+	
+	<!--
+		*****[분실방지기]*****
+	-->
+	<!-- [조회] 분실방지기 출입 현황 조회 -->
+	<select id="getAntiLostStatus" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			COALESCE(SUM(log.cnt), 0) AS cnt
+			,COALESCE(SUM(book.cnt), 0) AS book_cnt
+		FROM TBL_LIBRARY library 
+		LEFT OUTER JOIN (
+			SELECT
+				library_key
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date > date_trunc('day', now())
+			GROUP BY library_key
+		) log ON library.rec_key = log.library_key
+		LEFT OUTER JOIN (
+			SELECT
+				library_key
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date > date_trunc('day', now())
+			GROUP BY library_key
+		) book ON library.rec_key = book.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 분실방지기 금일 이용정보 조회 -->
+	<select id="getAntiLostUseLogCntbyToday" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			SUM(log.cnt) AS cnt
+			,SUM(book.cnt) AS book_cnt
+		FROM TBL_LIBRARY library 
+		LEFT OUTER JOIN (
+			SELECT
+				library_key
+				,COALESCE(MAX(cnt), 0) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date > date_trunc('day', now())
+			GROUP BY library_key
+		) log ON library.rec_key = log.library_key
+		LEFT OUTER JOIN (
+			SELECT
+				library_key
+				,COALESCE(COUNT(*), 0) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date > date_trunc('day', now())
+			GROUP BY library_key
+		) book ON library.rec_key = book.library_key
+		<where>
+			<if test='library_key != "" and library_key != null'>
+				AND library.rec_key = #{library_key}
+			</if>
+		</where>
+	</select>
+	
+	<!-- [조회] 분실방지기 주간 이용정보 조회 -->
+	<select id="getAntiLostUseLogCntbyWeek" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS event_date
+			,'' AS label_nm
+			,'카운트 횟수' AS cnt
+			,'부정도서 권수' AS book_cnt
+		UNION ALL
+		SELECT
+			TO_CHAR(date.date_value, 'YYYY-MM-DD') AS event_date
+			,TO_CHAR(date.date_value, 'MM/DD(Dy)') AS label_nm
+			,COALESCE(log.cnt, 0)::text AS cnt
+			,COALESCE(book.cnt, 0)::text AS book_cnt
+		FROM (
+			SELECT GENERATE_SERIES(TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second', '1 days') AS date_value
+		) date
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', log_date) AS date
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date between TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date
+		) log ON log.date = date.date_value
+		LEFT OUTER JOIN (
+			SELECT
+				date_trunc('day', log_date) AS date
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date between TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD') + INTERVAL '1 day' - INTERVAL '1 second'
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date
+		) book ON book.date = date.date_value
+	</select>
+	
+	<!-- [조회] 분실방지기 시간별 이용정보 조회 -->
+	<select id="getAntiLostUseLogCntbyTime" parameterType="map" resultType="java.util.LinkedHashMap">
+		SELECT
+			'' AS event_time
+			,'' AS label_nm
+			,'카운트 횟수' AS cnt
+			,'부정도서 권수' AS book_cnt
+		UNION ALL
+		SELECT
+			date.time::text AS event_time
+			,date.time || '시' AS label_nm
+			,COALESCE(log.cnt, 0)::text AS cnt
+			,COALESCE(book.cnt, 0)::text AS book_cnt
+		FROM GENERATE_SERIES(0, 23, 1) date(time)
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'HH24')::integer AS date
+				,MAX(cnt) AS cnt
+			FROM TBL_API_ANTILOST_CNT
+			WHERE log_date > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date
+		) log ON log.date = date.time
+		LEFT OUTER JOIN (
+			SELECT
+				TO_CHAR(log_date, 'HH24')::integer AS date
+				,COUNT(*) AS cnt
+			FROM TBL_API_ANTILOST_BOOK
+			WHERE log_date > date_trunc('day', now())
+			<if test='library_key != "" and library_key != null'>
+				AND library_key = #{library_key}
+			</if>
+			GROUP BY date
+		) book ON book.date = date.time
+	</select>
+</mapper>
