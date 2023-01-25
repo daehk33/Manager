@@ -1,0 +1,18 @@
+.btns {
+	transition: all .3s ease;
+}
+
+.btns {
+	position: absolute !important;
+	z-index: 9999;
+}
+
+.btn-back[data-show=true] {
+	top: 50px;
+	left: 20px;
+}
+
+.btn-back[data-show=false] {
+	top: -50px;
+	left: 20px;
+}

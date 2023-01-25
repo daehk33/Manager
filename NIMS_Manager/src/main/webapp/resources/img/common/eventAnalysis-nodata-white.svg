@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   viewBox="0 0 166.688 55.563"
+   version="1.1"
+   id="svg1045"
+   sodipodi:docname="eventAnalysis-nodata-white.svg"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)">
+  <metadata
+     id="metadata1049">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1398"
+     inkscape:window-height="803"
+     id="namedview1047"
+     showgrid="false"
+     inkscape:zoom="4.031484"
+     inkscape:cx="83.344"
+     inkscape:cy="27.7815"
+     inkscape:window-x="368"
+     inkscape:window-y="82"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1045" />
+  <defs
+     id="defs945">
+    <linearGradient
+       id="a"
+       osb:paint="solid">
+      <stop
+         offset="0"
+         stop-color="#23cf93"
+         id="stop942" />
+    </linearGradient>
+  </defs>
+  <path
+     fill="#ef7f34"
+     fill-rule="evenodd"
+     d="M54.466 27.781H66.41a22.225 22.225 0 00-6.51-15.715l-8.38 8.38c1.862 1.938 2.93 4.64 2.946 7.335z"
+     id="path947" />
+  <path
+     fill="#efaf34"
+     fill-rule="evenodd"
+     d="M51.49 35.085l8.41 8.412a22.225 22.225 0 006.508-15.38 22.225 22.225 0 00.002-.336H54.466c.003.421-.015.842-.065 1.26-.187 2.32-1.304 4.415-2.912 6.044z"
+     id="path949" />
+  <path
+     fill="#e85fb6"
+     fill-rule="evenodd"
+     d="M44.185 38.337v11.67a22.225 22.225 0 0015.716-6.51l-8.412-8.412c-1.922 1.948-4.558 3.213-7.304 3.252z"
+     id="path951" />
+  <path
+     fill="#d03fff"
+     fill-rule="evenodd"
+     d="M36.648 35.318l-8.178 8.179a22.225 22.225 0 0015.407 6.507 22.225 22.225 0 00.308.002V38.337c-.014 0-.028.005-.042.005-2.827.148-5.503-1.08-7.495-3.024z"
+     id="path953" />
+  <path
+     fill="#7e44ea"
+     fill-rule="evenodd"
+     d="M33.404 27.781H21.96a22.225 22.225 0 006.51 15.716l8.178-8.179c-1.76-1.719-2.989-3.993-3.24-6.445-.044-.366-.004-.727-.004-1.092z"
+     id="path955" />
+  <path
+     fill="#a478f7"
+     fill-rule="evenodd"
+     d="M28.47 12.066A22.225 22.225 0 0021.962 27.5a22.225 22.225 0 00-.002.28h11.444c-.006-2.828 1.253-5.534 3.267-7.515z"
+     id="path957" />
+  <path
+     fill="#5c417f"
+     fill-rule="evenodd"
+     d="M28.47 12.066l8.2 8.2c1.82-1.79 4.198-2.997 6.786-3.06.243-.008.486.017.73.027V5.556a22.225 22.225 0 00-15.716 6.51z"
+     id="path959" />
+  <path
+     fill="#ff3f51"
+     fill-rule="evenodd"
+     d="M44.185 5.556v11.677c1.604.068 3.191.484 4.61 1.233a9.148 9.148 0 012.725 1.98l8.38-8.38a22.225 22.225 0 00-15.35-6.507l-.112-.001a22.225 22.225 0 00-.253-.002z"
+     id="path961" />
+  <text
+     x="49.292"
+     y="13.897"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text965"><tspan
+       x="49.292"
+       y="13.897"
+       id="tspan963">0</tspan></text>
+  <text
+     x="58.555"
+     y="22.604"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text969"><tspan
+       x="58.555"
+       y="22.604"
+       id="tspan967">0</tspan></text>
+  <text
+     x="58.973"
+     y="35.432"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text973"><tspan
+       x="58.973"
+       y="35.432"
+       id="tspan971">0</tspan></text>
+  <text
+     x="49.868"
+     y="44.218"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text977"><tspan
+       x="49.868"
+       y="44.218"
+       id="tspan975">0</tspan></text>
+  <text
+     x="36.829"
+     y="43.95"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text981"><tspan
+       x="36.829"
+       y="43.95"
+       id="tspan979">0</tspan></text>
+  <text
+     x="27.648"
+     y="35.421"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text985"><tspan
+       x="27.648"
+       y="35.421"
+       id="tspan983">0</tspan></text>
+  <text
+     x="27.833"
+     y="22.548"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text989"><tspan
+       x="27.833"
+       y="22.548"
+       id="tspan987">0</tspan></text>
+  <text
+     x="37.511"
+     y="14.185"
+     fill="#fff"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="3.175"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text993"><tspan
+       x="37.511"
+       y="14.185"
+       id="tspan991">0</tspan></text>
+  <path
+     fill="#ff3f51"
+     fill-rule="evenodd"
+     d="m 85.46,8.9648096 h 3.175 V 12.139808 H 85.46 Z"
+     id="path995" />
+  <path
+     fill="#ef7f34"
+     fill-rule="evenodd"
+     d="m 85.46,13.719808 h 3.175 v 3.175 H 85.46 Z"
+     id="path997" />
+  <path
+     fill="#efaf34"
+     fill-rule="evenodd"
+     d="m 85.46,18.482808 h 3.175 v 3.175 H 85.46 Z"
+     id="path999" />
+  <path
+     fill="#e85fb6"
+     fill-rule="evenodd"
+     d="m 85.46,23.243808 h 3.175 v 3.175 H 85.46 Z"
+     id="path1001" />
+  <path
+     fill="#d03fff"
+     fill-rule="evenodd"
+     d="m 85.46,28.014808 h 3.175 v 3.175 H 85.46 Z"
+     id="path1003" />
+  <path
+     fill="#7e44ea"
+     fill-rule="evenodd"
+     d="m 85.46,32.784808 h 3.175 v 3.175 H 85.46 Z"
+     id="path1005" />
+  <path
+     fill="#a478f7"
+     fill-rule="evenodd"
+     d="m 85.46,37.924808 h 3.175 v 3.175 H 85.46 Z"
+     id="path1007" />
+  <path
+     fill="#5c417f"
+     fill-rule="evenodd"
+     d="m 85.46,42.699808 h 3.175 v 3.175 H 85.46 Z"
+     id="path1009" />
+  <text
+     x="90.458"
+     y="11.509809"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1013"><tspan
+       class="svg-text"
+       x="90.458"
+       y="11.509809"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1011">선반 꺼내오기 에러 (0.0%)</tspan></text>
+  <text
+     x="127.794"
+     y="16.669"
+     stroke-width=".265"
+     font-family="sans-serif"
+     font-size="10.583"
+     font-weight="400"
+     style="line-height:1.25"
+     id="text1015" />
+  <text
+     x="90.464996"
+     y="16.233812"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1019"><tspan
+       class="svg-text"
+       x="90.464996"
+       y="16.233812"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1017">선반 내보내기 에러 (0.0%)</tspan></text>
+  <text
+     x="90.457001"
+     y="21.294813"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1023"><tspan
+       class="svg-text"
+       x="90.457001"
+       y="21.294813"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1021">투입구 선반 꺼내오기 에러 (0.0%)</tspan></text>
+  <text
+     x="90.446999"
+     y="26.018812"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1027"><tspan
+       class="svg-text"
+       x="90.446999"
+       y="26.018812"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1025">투입구 선반 내보내기 에러 (0.0%)</tspan></text>
+  <text
+     x="90.525002"
+     y="30.763813"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1031"><tspan
+       class="svg-text"
+       x="90.525002"
+       y="30.763813"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1029">선반 돌출 에러 (0.0%)</tspan></text>
+  <text
+     x="90.530998"
+     y="35.487812"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1035"><tspan
+       class="svg-text"
+       x="90.530998"
+       y="35.487812"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1033">투입구 미처리 선반 감지 (0.0%)</tspan></text>
+  <text
+     x="90.523003"
+     y="40.548813"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1039"><tspan
+       class="svg-text"
+       x="90.523003"
+       y="40.548813"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1037">투입구 센서 감지됨 (0.0%)</tspan></text>
+  <text
+     x="90.514"
+     y="45.272812"
+     stroke-width="0.265"
+     font-family="Arial"
+     font-size="3.175px"
+     font-weight="400"
+     style="line-height:1.25;-inkscape-font-specification:Arial"
+     id="text1043"><tspan
+       class="svg-text"
+       x="90.514"
+       y="45.272812"
+       fill="#575962"
+       style="-inkscape-font-specification:Arial"
+       id="tspan1041">기타 (0.0%)</tspan></text>
+</svg>

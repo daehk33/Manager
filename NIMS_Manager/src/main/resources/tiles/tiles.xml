@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?> <!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+	<!-- Default Layout -->
+	<definition name="default-layout" template="/WEB-INF/tiles/layouts/default-layout.jsp">
+		<put-attribute name="include" value="/WEB-INF/tiles/components/include.jsp" />
+		<put-attribute name="side" value="/WEB-INF/tiles/components/side.jsp" />
+		<put-attribute name="header" value="/WEB-INF/tiles/components/header.jsp" />
+		<put-attribute name="footer" value="/WEB-INF/tiles/components/footer.jsp" />
+	</definition>
+	
+	<!-- 메인 페이지 -->
+	<definition name="main/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/{1}.jsp" />
+	</definition>
+	
+	<!-- 사용자 페이지 -->
+	<definition name="manager/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/manager/{1}.jsp" />
+	</definition>
+	
+	<!-- 메뉴 -->
+	<definition name="main/library/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/library/{1}.jsp" />
+	</definition>
+	<definition name="main/device/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/device/{1}.jsp" />
+	</definition>
+	<definition name="main/sls/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/sls/{1}.jsp" />
+	</definition>
+	<definition name="main/loanReturn/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/loanReturn/{1}.jsp" />
+	</definition>
+	<definition name="main/return/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/return/{1}.jsp" />
+	</definition>
+	<definition name="main/resvLoan/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/resvLoan/{1}.jsp" />
+	</definition>
+	<definition name="main/antiLost/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/antiLost/{1}.jsp" />
+	</definition>
+	<definition name="main/gate/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/gate/{1}.jsp" />
+	</definition>
+	<definition name="main/log/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/log/{1}.jsp" />
+	</definition>
+	<definition name="main/system/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/system/{1}.jsp" />
+	</definition>
+	<definition name="main/admin/manager/*" extends="default-layout">
+		<put-attribute name="content" value="/WEB-INF/views/main/admin/manager/{1}.jsp" />
+	</definition>
+	
+	<!-- Normal Layout -->
+	<definition name="normal-layout" template="/WEB-INF/tiles/layouts/normal-layout.jsp">
+		<put-attribute name="include" value="/WEB-INF/tiles/components/include.jsp" />
+	</definition>
+	
+	<definition name="single/*" extends="normal-layout">
+		<put-attribute name="content" value="/WEB-INF/views/single/{1}.jsp" />
+	</definition>
+	
+	<!-- DID Layout -->
+	<definition name="did-layout" template="/WEB-INF/tiles/layouts/did-layout.jsp">
+		<put-attribute name="include" value="/WEB-INF/tiles/components/include.jsp" />
+	</definition>
+	
+	<definition name="did/*" extends="did-layout">
+		<put-attribute name="content" value="/WEB-INF/views/did/{1}.jsp" />
+	</definition>
+</tiles-definitions>
+	

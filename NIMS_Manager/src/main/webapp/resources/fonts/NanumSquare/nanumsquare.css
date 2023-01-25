@@ -1,0 +1,83 @@
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 100;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareL.eot);
+ src: url(NanumSquareL.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareL.woff) format('woff'),
+      url(NanumSquareL.ttf) format('truetype');
+}
+
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 200;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareL.eot);
+ src: url(NanumSquareL.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareL.woff) format('woff'),
+      url(NanumSquareL.ttf) format('truetype');
+}
+
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 300;
+ unicode-range: U+0030-0039;
+ src: url(*);
+ src: url(NanumSquareL.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareL.woff) format('woff'),
+      url(NanumSquareL.ttf) format('truetype');
+}
+
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 400;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareR.eot);
+ src: url(NanumSquareR.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareR.woff) format('woff'),
+      url(NanumSquareR.ttf) format('truetype');
+}
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 500;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareR.eot);
+ src: url(NanumSquareR.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareR.woff) format('woff'),
+      url(NanumSquareR.ttf) format('truetype');
+}
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 600;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareB.eot);
+ src: url(NanumSquareB.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareB.woff) format('woff'),
+      url(NanumSquareB.ttf) format('truetype');
+}
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 700;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareB.eot);
+ src: url(NanumSquareB.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareB.woff) format('woff'),
+      url(NanumSquareB.ttf) format('truetype');
+}
+@font-face {
+ font-family: 'NanumSquare';
+ font-style: normal;
+ font-weight: 800;
+ unicode-range: U+0030-0039;
+ src: url(NanumSquareEB.eot);
+ src: url(NanumSquareEB.eot?#iefix) format('embedded-opentype'),
+      url(NanumSquareEB.woff) format('woff'),
+      url(NanumSquareEB.ttf) format('truetype');
+}

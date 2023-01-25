@@ -1,0 +1,78 @@
+@charset "UTF-8";
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+@keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg);
+  }
+}
+body {
+	background: linear-gradient(120deg, #7e44ea, #009688);
+	width: 100%;
+	min-height: 100vh;
+	background-size: cover;
+	font-family: "Noto Sans KR", sans-serif;
+}
+
+.main {
+	position: relative;
+	display: block;
+	text-align: center;
+	word-break: keep-all;
+}
+
+.content {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 40%;
+	height: 60%;
+	padding: 90px 0;
+	transition: 2s;
+	-webkit-transform: translate(-50%, -50%);
+	transform: translate(-50%, -50%);
+}
+
+h1 {
+	color: #fff !important;
+	font-size: 62px;
+	font-weight: 400 !important;
+}
+
+p {
+	color: #fff !important;
+	margin-top: 16px;
+	box-sizing: border-box;
+	font-family: "Noto Sans KR", "NanumBarunGothic", "Spoqa Han Sans KR",
+		sans-serif;
+}
+
+.content .meta {
+	margin-bottom: 30px;
+	text-align: center;
+}
+
+.content .meta-title {
+	font-weight: 400;
+	margin-top: 5px;
+}
+
+.content .meta-logo {
+	display: block;
+	margin: auto;
+}
+
+.hidden {
+	display: none;
+}
